@@ -73,8 +73,26 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	//readInfo13.dword = nvmeIOCmd->dword[13];
 	//readInfo15.dword = nvmeIOCmd->dword[15];
 
-	startLba[0] = nvmeIOCmd->dword[10];
-	startLba[1] = nvmeIOCmd->dword[11];
+	/*
+	 * struct nvme_rw_command {
+		__u8			opcode;
+		__u8			flags;
+		__u16			command_id;
+		__le32			nsid;
+		__u64			rsvd2;
+		__le64			metadata;
+		union nvme_data_ptr	dptr;
+		__le64			slba; // dword - 10, 11
+		__le16			length; // dword - 12
+		__le16			control; // dword - 12
+		__le32			dsmgmt;
+		__le32			reftag;
+		__le16			apptag;
+		__le16			appmask;
+	};
+	 */
+	startLba[0] = nvmeIOCmd->dword[10]; // slba low bytes
+	startLba[1] = nvmeIOCmd->dword[11]; // slba top bytes
 	nlb = readInfo12.NLB;
 
 	ASSERT(startLba[0] < storageCapacity_L && (startLba[1] < STORAGE_CAPACITY_H || startLba[1] == 0));

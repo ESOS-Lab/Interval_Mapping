@@ -75,6 +75,7 @@ void InitDependencyTable()
 	}
 }
 
+// TODO: need to extend startLba to include 36bit (48bit LBA - 12bit (nvme block size))
 void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigned int nlb, unsigned int cmdCode)
 {
 	unsigned int reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode;
