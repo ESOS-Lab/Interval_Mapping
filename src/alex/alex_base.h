@@ -362,37 +362,33 @@ inline int log_2_round_down(int x) {
 	return res;
 }
 
-// https://stackoverflow.com/questions/1666093/cpuid-implementations-in-c
-class CPUID {
-	uint32_t regs[4];
-
-public:
-	explicit CPUID(unsigned i, unsigned j) {
-#ifdef _WIN32
-		__cpuidex((int*)regs, (int)i, (int)j);
-#else
-		asm volatile("cpuid"
-				: "=a"(regs[0]), "=b"(regs[1]), "=c"(regs[2]), "=d"(regs[3])
-				: "a"(i), "c"(j));
-#endif
-	}
-
-	const uint32_t& EAX() const {
-		return regs[0];
-	}
-	const uint32_t& EBX() const {
-		return regs[1];
-	}
-	const uint32_t& ECX() const {
-		return regs[2];
-	}
-	const uint32_t& EDX() const {
-		return regs[3];
-	}
-};
-
-// https://en.wikipedia.org/wiki/CPUID#EAX=7,_ECX=0:_Extended_Features
-bool cpu_supports_bmi() {
-	return static_cast<bool>(CPUID(7, 0).EBX() & (1 << 3));
-}
+//// https://stackoverflow.com/questions/1666093/cpuid-implementations-in-c
+//class CPUID {
+//	uint32_t regs[4];
+//
+//public:
+//	explicit CPUID(unsigned i, unsigned j) {
+//		asm volatile("cpuid"
+//				: "=eax"(regs[0]), "=ebx"(regs[1]), "=ecx"(regs[2]), "=edx"(regs[3])
+//				: "eax"(i), "ecx"(j));
+//	}
+//
+//	const uint32_t& EAX() const {
+//		return regs[0];
+//	}
+//	const uint32_t& EBX() const {
+//		return regs[1];
+//	}
+//	const uint32_t& ECX() const {
+//		return regs[2];
+//	}
+//	const uint32_t& EDX() const {
+//		return regs[3];
+//	}
+//};
+//
+//// https://en.wikipedia.org/wiki/CPUID#EAX=7,_ECX=0:_Extended_Features
+//bool cpu_supports_bmi() {
+//	return static_cast<bool>(CPUID(7, 0).EBX() & (1 << 3));
+//}
 }
