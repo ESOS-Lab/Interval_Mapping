@@ -329,7 +329,7 @@ void dev_irq_handler();
 
 unsigned int check_nvme_cc_en();
 
-void set_nvme_csts_rdy();
+void set_nvme_csts_rdy(unsigned int rdy);
 
 void set_nvme_csts_shst(unsigned int shst);
 
