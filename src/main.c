@@ -73,6 +73,7 @@
 #include "nvme/nvme_main.h"
 #include "nvme/host_lld.h"
 
+#include "alex/alex.h"
 
 XScuGic GicInstance;
 
@@ -128,6 +129,11 @@ int main()
 	Xil_ExceptionEnable();
 
 	dev_irq_init();
+
+	alex::Alex<int, int> index;
+	index.insert(0, 12);
+	int out = index.find(0).payload();
+	xil_printf("found item %d\n", out);
 
 	nvme_main();
 
