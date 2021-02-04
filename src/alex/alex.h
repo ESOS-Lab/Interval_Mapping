@@ -1174,7 +1174,7 @@ public:
 			model_node_type* parent = traversal_path.back().node;
 
 			while (fail) {
-				auto start_time = std::chrono::high_resolution_clock::now();
+//				auto start_time = std::chrono::high_resolution_clock::now();
 				stats_.num_expand_and_scales += leaf->num_resizes_;
 
 				if (parent == superroot_) {
@@ -1205,10 +1205,10 @@ public:
 									derived_params_.max_fanout);
 				}
 				int best_fanout = 1 << fanout_tree_depth;
-				stats_.cost_computation_time +=
-						std::chrono::duration_cast<std::chrono::nanoseconds>(
-								std::chrono::high_resolution_clock::now()
-										- start_time).count();
+//				stats_.cost_computation_time +=
+//						std::chrono::duration_cast<std::chrono::nanoseconds>(
+//								std::chrono::high_resolution_clock::now()
+//										- start_time).count();
 
 				if (fanout_tree_depth == 0) {
 					// expand existing data node and retrain model
@@ -1259,10 +1259,10 @@ public:
 					leaf = static_cast<data_node_type*>(parent->get_child_node(
 							key));
 				}
-				auto end_time = std::chrono::high_resolution_clock::now();
-				auto duration = end_time - start_time;
-				stats_.splitting_time += std::chrono::duration_cast<
-						std::chrono::nanoseconds>(duration).count();
+//				auto end_time = std::chrono::high_resolution_clock::now();
+//				auto duration = end_time - start_time;
+//				stats_.splitting_time += std::chrono::duration_cast<
+//						std::chrono::nanoseconds>(duration).count();
 
 				// Try again to insert the key
 				ret = leaf->insert(key, payload);
@@ -2886,7 +2886,7 @@ public:
 				}
 				cur_bitmap_data_ = cur_leaf_->bitmap_[cur_bitmap_idx_];
 			}
-			assert(cpu_supports_bmi());
+//			assert(cpu_supports_bmi());
 			int bit_pos = static_cast<int>(63 - _lzcnt_u64(cur_bitmap_data_));
 			cur_idx_ = (cur_bitmap_idx_ << 6) + bit_pos;
 			cur_bitmap_data_ &= ~(1ULL << bit_pos);
@@ -3022,7 +3022,7 @@ public:
 				}
 				cur_bitmap_data_ = cur_leaf_->bitmap_[cur_bitmap_idx_];
 			}
-			assert(cpu_supports_bmi());
+//			assert(cpu_supports_bmi());
 			int bit_pos = static_cast<int>(63 - _lzcnt_u64(cur_bitmap_data_));
 			cur_idx_ = (cur_bitmap_idx_ << 6) + bit_pos;
 			cur_bitmap_data_ &= ~(1ULL << bit_pos);
