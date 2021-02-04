@@ -27,6 +27,8 @@
 #include <stdint.h>
 #define forceinline inline __attribute__((__always_inline__))
 
+#include "alex_adaptation.h"
+
 namespace alex {
 
 /*** Linear model and model builder ***/
