@@ -49,6 +49,7 @@
 
 #include "ftl_config.h"
 #include "nvme/nvme.h"
+#include "alex/alex.h"
 
 #define LSA_NONE	0xffffffff
 #define LSA_FAIL	0xffffffff
@@ -204,8 +205,10 @@ void UpdatePhyBlockMapForGrownBadBlock(unsigned int dieNo, unsigned int phyBlock
 void UpdateBadBlockTableForGrownBadBlock(unsigned int tempBufAddr);
 
 
-extern P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
-extern P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
+//extern P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
+//extern P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
+extern alex::Alex<unsigned int, unsigned int> logicalSlice;
+extern alex::Alex<unsigned int, unsigned int> virtualSlice;
 extern P_VIRTUAL_BLOCK_MAP virtualBlockMapPtr;
 extern P_VIRTUAL_DIE_MAP virtualDieMapPtr;
 extern P_PHY_BLOCK_MAP phyBlockMapPtr;
