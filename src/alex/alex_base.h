@@ -172,12 +172,12 @@ inline int get_offset(int word_id, uint64_t bit) {
 /*** Cost model weights ***/
 
 // Intra-node cost weights
-double kExpSearchIterationsWeight = 20;
-double kShiftsWeight = 0.5;
+const double kExpSearchIterationsWeight = 20;
+const double kShiftsWeight = 0.5;
 
 // TraverseToLeaf cost weights
-double kNodeLookupsWeight = 20;
-double kModelSizeWeight = 5e-7;
+const double kNodeLookupsWeight = 20;
+const double kModelSizeWeight = 5e-7;
 
 /*** Stat Accumulators ***/
 
