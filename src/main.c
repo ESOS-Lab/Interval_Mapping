@@ -130,10 +130,12 @@ int main()
 
 	dev_irq_init();
 
-	alex::Alex<int, int> index;
-	index.insert(0, 12);
-	int out = index.find(0).payload();
-	xil_printf("found item %d\n", out);
+//	alex::Alex<int, int> index;
+//	index.insert(0, 12);
+//	index.insert(1, 13);
+//	index.insert(2, 14);
+//	int out = index.find(1).payload();
+//	xil_printf("found item %d\n", out);
 
 	nvme_main();
 
