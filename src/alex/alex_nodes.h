@@ -28,7 +28,7 @@
 // the closest gap).
 // If your hardware does not support lzcnt/tzcnt (e.g., your Intel CPU is
 // pre-Haswell), set this to 0.
-#define ALEX_USE_LZCNT 1
+#define ALEX_USE_LZCNT 0
 
 namespace alex {
 
