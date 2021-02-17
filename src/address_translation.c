@@ -57,6 +57,9 @@ P_PHY_BLOCK_MAP phyBlockMapPtr;
 P_BAD_BLOCK_TABLE_INFO_MAP bbtInfoMapPtr;
 alex::Alex<unsigned int, unsigned int> logicalSlice;
 alex::Alex<unsigned int, unsigned int> virtualSlice;
+const void* allocator_start_addr = (const void*) (FTL_MANAGEMENT_END_ADDR + 1);
+const void* allocator_end_addr = (const void*) (DRAM_END_ADDR);
+void* memAddr = (void*) allocator_start_addr;
 
 unsigned char sliceAllocationTargetDie;
 unsigned int mbPerbadBlockSpace;

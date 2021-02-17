@@ -49,7 +49,7 @@
 namespace alex {
 
 template<class T, class P, class Compare = AlexCompare,
-		class Alloc = std::allocator<std::pair<T, P>>, bool allow_duplicates =
+		class Alloc = OpenSSDAllocator<std::pair<T, P>>, bool allow_duplicates =
 				true>
 class Alex {
 	static_assert(std::is_arithmetic<T>::value, "ALEX key type must be numeric.");

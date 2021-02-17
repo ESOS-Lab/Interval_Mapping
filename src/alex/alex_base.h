@@ -25,6 +25,7 @@
 #include <bitset>
 #include <cassert>
 #include <stdint.h>
+#include "openssd_allocator.h"
 #define forceinline inline __attribute__((__always_inline__))
 
 #include "alex_adaptation.h"

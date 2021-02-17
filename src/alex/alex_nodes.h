@@ -11,6 +11,7 @@
 #pragma once
 
 #include "alex_base.h"
+#include "xil_printf.h"
 
 // Whether we store key and payload arrays separately in data nodes
 // By default, we store them separately
@@ -68,7 +69,7 @@ public:
 	virtual long long node_size() const = 0;
 };
 
-template<class T, class P, class Alloc = std::allocator<std::pair<T, P>>>class AlexModelNode : public AlexNode<T, P> {
+template<class T, class P, class Alloc = OpenSSDAllocator<std::pair<T, P>>>class AlexModelNode : public AlexNode<T, P> {
 public:
 	typedef AlexModelNode<T, P, Alloc> self_type;
 	typedef typename Alloc::template rebind<self_type>::other alloc_type;
@@ -291,7 +292,7 @@ public:
  * - Debugging
  */
 template<class T, class P, class Compare = AlexCompare,
-		class Alloc = std::allocator<std::pair<T, P>>, bool allow_duplicates =
+		class Alloc = OpenSSDAllocator<std::pair<T, P>>, bool allow_duplicates =
 				true>
 class AlexDataNode: public AlexNode<T, P> {
 public:
@@ -474,6 +475,7 @@ public:
 
 	// Mark the entry for position in the bitmap
 	inline void set_bit(int pos) {
+		xil_printf("pos=%x, capacity=%x\n", pos, data_capacity_);
 		assert(pos >= 0 && pos < data_capacity_);
 		int bitmap_pos = pos >> 6;
 		int bit_pos = pos - (bitmap_pos << 6);
@@ -1690,6 +1692,8 @@ public:
 			return {2, -1};
 		}
 
+		xil_printf("insert %x, %x\n", key, payload);
+
 		// Check if node is full (based on expansion_threshold)
 		if (num_keys_ >= expansion_threshold_) {
 			if (significant_cost_deviation()) {
@@ -1720,6 +1724,7 @@ public:
 				&& !check_exists(insertion_position)) {
 			insert_element_at(key, payload, insertion_position);
 		} else {
+			xil_printf("key=%x, insert=%x\n", key, insertion_position);
 			insertion_position = insert_using_shifts(key, payload,
 					insertion_position);
 		}
@@ -1907,6 +1912,7 @@ public:
 	// Insert key into pos, shifting as necessary in the range [left, right)
 	// Returns the actual position of insertion
 	int insert_using_shifts(const T& key, P payload, int pos) {
+		xil_printf("inserting %x, %x, %x\n", key, payload, pos);
 		// Find the closest gap
 		int gap_pos = closest_gap(pos);
 		set_bit(gap_pos);
