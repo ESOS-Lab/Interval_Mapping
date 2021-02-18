@@ -8,6 +8,8 @@
 #ifndef SRC_ALEX_OPENSSD_ALLOCATOR_H_
 #define SRC_ALEX_OPENSSD_ALLOCATOR_H_
 
+#include <xil_printf.h>
+
 extern const void* allocator_start_addr;
 extern const void* allocator_end_addr;
 extern void* memAddr;
@@ -26,13 +28,13 @@ public:
 	constexpr OpenSSDAllocator(const OpenSSDAllocator<_Other> &) noexcept {
 	}
 
-	[[nodiscard]]
 	T *allocate(std::size_t n) {
+		xil_printf("allocate %d\n", n);
 		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
 			throw std::bad_alloc();
 
 		T* p = static_cast<T *>(memAddr);
-		memAddr += sizeof(n * sizeof(T));
+		memAddr += n * sizeof(T);
 
 		if (memAddr >= allocator_end_addr)
 			throw std::bad_alloc();
@@ -42,7 +44,7 @@ public:
 	void deallocate(T *p, std::size_t n) noexcept
 	{
 		// report(p, n, 0);
-		std::free(p);
+//		std::free(p);
 	}
 
 	void destroy(T *p) {
