@@ -29,12 +29,13 @@ public:
 	}
 
 	T *allocate(std::size_t n) {
-		xil_printf("allocate %d\n", n);
 		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
 			throw std::bad_alloc();
 
 		T* p = static_cast<T *>(memAddr);
 		memAddr += n * sizeof(T);
+
+		// xil_printf("allocate %p\n", p);
 
 		if (memAddr >= allocator_end_addr)
 			throw std::bad_alloc();
