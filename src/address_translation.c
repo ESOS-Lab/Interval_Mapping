@@ -680,12 +680,15 @@ void InitBlockDieMap() {
 
 unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
+	alex::Alex<unsigned int, unsigned int>::Iterator it;
 
 	if (logicalSliceAddr < SLICES_PER_SSD) {
-		virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
+		it = logicalSlice.find(logicalSliceAddr);
+		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
+		else virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
-
+//        xil_printf("reading logical=%p, virtual=%p\n", logicalSliceAddr, virtualSliceAddr);
 		if (virtualSliceAddr != VSA_NONE)
 			return virtualSliceAddr;
 		else
