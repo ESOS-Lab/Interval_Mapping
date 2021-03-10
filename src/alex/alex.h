@@ -39,6 +39,8 @@
 #include "alex_fanout_tree.h"
 #include "alex_nodes.h"
 
+#include <xil_printf.h>
+
 // Whether we account for floating-point precision issues when traversing down
 // ALEX.
 // These issues rarely occur in practice but can cause incorrect behavior.
@@ -923,9 +925,13 @@ public:
 	// If you instead want an iterator to the left-most key with the input value,
 	// use lower_bound()
 	typename self_type::Iterator find(const T& key) {
+		if (ALEXDEBUG)
+			xil_printf("find: key=%d\n", key);
 		stats_.num_lookups++;
 		data_node_type* leaf = get_leaf(key);
 		int idx = leaf->find_key(key);
+		if (ALEXDEBUG)
+			xil_printf("find: leaf_addr=%d, idx=%d\n", leaf, idx);
 		if (idx < 0) {
 			return end();
 		} else {
@@ -1143,6 +1149,8 @@ public:
 	std::pair<Iterator, bool> insert(const T& key, const P& payload) {
 		// If enough keys fall outside the key domain, expand the root to expand the
 		// key domain
+		if (ALEXDEBUG)
+			xil_printf("insert: key=%d, payload=%d\n", key, payload);
 		if (key > istats_.key_domain_max_) {
 			istats_.num_keys_above_key_domain++;
 			if (should_expand_right()) {
@@ -1156,6 +1164,8 @@ public:
 		}
 
 		data_node_type* leaf = get_leaf(key);
+		if (ALEXDEBUG)
+			xil_printf("insert: leaf filled=%d, capacity=%d\n", leaf->num_keys_, leaf->data_capacity_);
 
 		// Nonzero fail flag means that the insert did not happen
 		std::pair<int, int> ret = leaf->insert(key, payload);
@@ -1165,6 +1175,9 @@ public:
 			// Duplicate found and duplicates not allowed
 			return {Iterator(leaf, insert_pos), false};
 		}
+
+		if (ALEXDEBUG)
+			xil_printf("insert: fail=%d, insert_pos=%d\n\n", ret.first, ret.second);
 
 		// If no insert, figure out what to do with the data node to decrease the
 		// cost

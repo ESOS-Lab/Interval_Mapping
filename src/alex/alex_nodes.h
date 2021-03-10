@@ -475,7 +475,7 @@ public:
 
 	// Mark the entry for position in the bitmap
 	inline void set_bit(int pos) {
-		xil_printf("pos=%x, capacity=%x\n", pos, data_capacity_);
+		// xil_printf("pos=%x, capacity=%x\n", pos, data_capacity_);
 		assert(pos >= 0 && pos < data_capacity_);
 		int bitmap_pos = pos >> 6;
 		int bit_pos = pos - (bitmap_pos << 6);
@@ -1463,10 +1463,14 @@ public:
 		num_lookups_++;
 		int predicted_pos = predict_position(key);
 
+
 		// The last key slot with a certain value is guaranteed to be a real key
 		// (instead of a gap)
 		int pos = exponential_search_upper_bound(predicted_pos, key) - 1;
-		if (pos < 0 || !key_equal(ALEX_DATA_NODE_KEY_AT(pos), key)) {
+		if (ALEXDEBUG)
+			xil_printf("find_key: predicted_pos=%d, pos_after_search=%d\n", predicted_pos, pos);
+		if (pos < 0 || !key_equal(ALEX_DATA_NODE_KEY_AT(pos), key))
+		{
 			return -1;
 		} else {
 			return pos;
@@ -1505,6 +1509,8 @@ public:
 
 		// insert to the right of duplicate keys
 		int pos = exponential_search_upper_bound(predicted_pos, key);
+		if (ALEXDEBUG)
+			xil_printf("find_insert_position: predicted_pos=%d, searched_pos=%d\n", predicted_pos, pos);
 		if (predicted_pos <= pos || check_exists(pos)) {
 			return {pos, pos};
 		} else {
@@ -1570,6 +1576,8 @@ public:
 					&& key_greater(ALEX_DATA_NODE_KEY_AT(m - bound), key)) {
 				bound *= 2;
 				num_exp_search_iterations_++;
+				if (ALEXDEBUG)
+					xil_printf("exp_search: greater pos=%d, key_slots=%p, KEY_AT=%d, address=%p\n", m - bound, key_slots_, ALEX_DATA_NODE_KEY_AT(m - bound), &ALEX_DATA_NODE_KEY_AT(m - bound));
 			}
 			l = m - std::min<int>(bound, size);
 			r = m - bound / 2;
@@ -1579,10 +1587,15 @@ public:
 					&& key_lessequal(ALEX_DATA_NODE_KEY_AT(m + bound), key)) {
 				bound *= 2;
 				num_exp_search_iterations_++;
+				if (ALEXDEBUG)
+					xil_printf("exp_search: less pos=%d, key_slots=%p, KEY_AT=%d, address=%p\n", m + bound, key_slots_, ALEX_DATA_NODE_KEY_AT(m + bound), &ALEX_DATA_NODE_KEY_AT(m + bound));
 			}
 			l = m + bound / 2;
 			r = m + std::min<int>(bound, size);
+		
 		}
+		if (ALEXDEBUG)
+			xil_printf("exp_search: pos=%d, KEY_AT=%d, l=%d, r=%d\n", m, ALEX_DATA_NODE_KEY_AT(m), l, r);
 		return binary_search_upper_bound(l, r, key);
 	}
 
@@ -1593,6 +1606,8 @@ public:
 	inline int binary_search_upper_bound(int l, int r, const K& key) const {
 		while (l < r) {
 			int mid = l + (r - l) / 2;
+			if (ALEXDEBUG)
+				xil_printf("bi_search: mid=%d, KEY_AT=%d, l=%d, r=%d\n", mid, ALEX_DATA_NODE_KEY_AT(mid), l, r);
 			if (key_lessequal(ALEX_DATA_NODE_KEY_AT(mid), key)) {
 				l = mid + 1;
 			} else {
@@ -1692,7 +1707,8 @@ public:
 			return {2, -1};
 		}
 
-		xil_printf("insert %x, %x\n", key, payload);
+		if (ALEXDEBUG)
+			xil_printf("node-insert: key=%d, payload=%d\n", key, payload);
 
 		// Check if node is full (based on expansion_threshold)
 		if (num_keys_ >= expansion_threshold_) {
@@ -1724,7 +1740,6 @@ public:
 				&& !check_exists(insertion_position)) {
 			insert_element_at(key, payload, insertion_position);
 		} else {
-			xil_printf("key=%x, insert=%x\n", key, insertion_position);
 			insertion_position = insert_using_shifts(key, payload,
 					insertion_position);
 		}
@@ -1766,6 +1781,9 @@ public:
 		V[new_data_capacity];
 #endif
 
+		if (ALEXDEBUG)
+			xil_printf("resize: new_data_capacity=%d, force_retrain=%d, keep_left=%d, keep_right=%d\n",
+					   new_data_capacity, force_retrain, keep_left, keep_right);
 		// Retrain model if the number of keys is sufficiently small (under 50)
 		if (num_keys_ < 50 || force_retrain) {
 			const_iterator_type it(this, 0);
@@ -1893,6 +1911,8 @@ public:
 
 	// Insert key into pos. The caller must guarantee that pos is a gap.
 	void insert_element_at(const T& key, P payload, int pos) {
+		if (ALEXDEBUG)
+			xil_printf("insert_element_at: pos=%d, key=%d\n", pos, key);
 #if ALEX_DATA_NODE_SEP_ARRAYS
 		key_slots_[pos] = key;
 		payload_slots_[pos] = payload;
@@ -1912,7 +1932,8 @@ public:
 	// Insert key into pos, shifting as necessary in the range [left, right)
 	// Returns the actual position of insertion
 	int insert_using_shifts(const T& key, P payload, int pos) {
-		xil_printf("inserting %x, %x, %x\n", key, payload, pos);
+		if (ALEXDEBUG)
+			xil_printf("insert_using_shift:\n");
 		// Find the closest gap
 		int gap_pos = closest_gap(pos);
 		set_bit(gap_pos);

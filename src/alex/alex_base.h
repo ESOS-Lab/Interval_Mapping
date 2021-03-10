@@ -29,6 +29,9 @@
 #define forceinline inline __attribute__((__always_inline__))
 
 #include "alex_adaptation.h"
+#include "xil_printf.h"
+
+const bool ALEXDEBUG = false;
 
 namespace alex {
 
