@@ -206,7 +206,7 @@ void UpdateBadBlockTableForGrownBadBlock(unsigned int tempBufAddr);
 
 
 //extern P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
-//extern P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
+extern P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
 extern alex::Alex<unsigned int, unsigned int> logicalSlice;
 extern alex::Alex<unsigned int, unsigned int> virtualSlice;
 extern P_VIRTUAL_BLOCK_MAP virtualBlockMapPtr;

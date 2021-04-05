@@ -80,8 +80,8 @@ void GarbageCollection(unsigned int dieNo)
 		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
 		{
 			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
-//			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
-			logicalSliceAddr = virtualSlice.find(virtualSliceAddr).payload();
+			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
+//			logicalSliceAddr = virtualSlice.find(virtualSliceAddr).payload();
 
 			if(logicalSliceAddr != LSA_NONE)
 				if (logicalSlice.find(logicalSliceAddr).payload() == virtualSliceAddr)
@@ -122,9 +122,9 @@ void GarbageCollection(unsigned int dieNo)
 					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = FindFreeVirtualSliceForGc(dieNoForGcCopy, victimBlockNo);
 
 					*logicalSlice.get_payload(logicalSliceAddr) = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
-					*virtualSlice.get_payload(reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr) = logicalSliceAddr;
+//					*virtualSlice.get_payload(reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr) = logicalSliceAddr;
 //					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
-//					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
+					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
 
 					SelectLowLevelReqQ(reqSlotTag);
 				}

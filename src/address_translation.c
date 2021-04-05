@@ -50,7 +50,7 @@
 #include "xil_printf.h"
 
 //P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
-//P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
+P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
 P_VIRTUAL_BLOCK_MAP virtualBlockMapPtr;
 P_VIRTUAL_DIE_MAP virtualDieMapPtr;
 P_PHY_BLOCK_MAP phyBlockMapPtr;
@@ -59,7 +59,7 @@ const void* allocator_start_addr = (const void*) (FTL_MANAGEMENT_END_ADDR + 1);
 const void* allocator_end_addr = (const void*) (DRAM_END_ADDR);
 void* memAddr = (void*) allocator_start_addr;
 alex::Alex<unsigned int, unsigned int> logicalSlice;
-alex::Alex<unsigned int, unsigned int> virtualSlice;
+// alex::Alex<unsigned int, unsigned int> virtualSlice;
 
 unsigned char sliceAllocationTargetDie;
 unsigned int mbPerbadBlockSpace;
@@ -68,7 +68,7 @@ void InitAddressMap() {
 	unsigned int blockNo, dieNo;
 
 //	logicalSliceMapPtr = (P_LOGICAL_SLICE_MAP) LOGICAL_SLICE_MAP_ADDR;
-//	virtualSliceMapPtr = (P_VIRTUAL_SLICE_MAP) VIRTUAL_SLICE_MAP_ADDR;
+	virtualSliceMapPtr = (P_VIRTUAL_SLICE_MAP) VIRTUAL_SLICE_MAP_ADDR;
 	virtualBlockMapPtr = (P_VIRTUAL_BLOCK_MAP) VIRTUAL_BLOCK_MAP_ADDR;
 	virtualDieMapPtr = (P_VIRTUAL_DIE_MAP) VIRTUAL_DIE_MAP_ADDR;
 	phyBlockMapPtr = (P_PHY_BLOCK_MAP) PHY_BLOCK_MAP_ADDR;
@@ -94,7 +94,7 @@ void InitSliceMap() {
 	int sliceAddr;
 	for (sliceAddr = 0; sliceAddr < SLICES_PER_SSD; sliceAddr++) {
 //		logicalSliceMapPtr->logicalSlice[sliceAddr].virtualSliceAddr = VSA_NONE;
-//		virtualSliceMapPtr->virtualSlice[sliceAddr].logicalSliceAddr = LSA_NONE;
+		virtualSliceMapPtr->virtualSlice[sliceAddr].logicalSliceAddr = LSA_NONE;
 	}
 }
 
@@ -707,11 +707,11 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 		virtualSliceAddr = FindFreeVirtualSlice();
 
 		logicalSlice.insert(logicalSliceAddr, virtualSliceAddr);
-		virtualSlice.insert(virtualSliceAddr, logicalSliceAddr);
+		// virtualSlice.insert(virtualSliceAddr, logicalSliceAddr);
 //		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
 //				virtualSliceAddr;
-//		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
-//				logicalSliceAddr;
+		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
+				logicalSliceAddr;
 
 		return virtualSliceAddr;
 	} else
@@ -815,9 +815,9 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 //			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 
 	if (virtualSliceAddr != VSA_NONE) {
-		if (virtualSlice.find(virtualSliceAddr).payload() != logicalSliceAddr)
-//		if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr
-//				!= logicalSliceAddr)
+//		if (virtualSlice.find(virtualSliceAddr).payload() != logicalSliceAddr)
+		if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr
+				!= logicalSliceAddr)
 			return;
 
 		dieNo = Vsa2VdieTranslation(virtualSliceAddr);
@@ -867,9 +867,9 @@ void EraseBlock(unsigned int dieNo, unsigned int blockNo) {
 
 	for (pageNo = 0; pageNo < USER_PAGES_PER_BLOCK; pageNo++) {
 		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, pageNo);
-		virtualSlice.erase(virtualSliceAddr);
-//		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
-//		LSA_NONE;
+//		virtualSlice.erase(virtualSliceAddr);
+		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
+		LSA_NONE;
 	}
 }
 
