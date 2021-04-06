@@ -685,10 +685,10 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	if (logicalSliceAddr < SLICES_PER_SSD) {
 		it = logicalSlice.find(logicalSliceAddr);
 		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
-		else virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
+		else virtualSliceAddr = it.payload();
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
-//        xil_printf("reading logical=%p, virtual=%p\n", logicalSliceAddr, virtualSliceAddr);
+       xil_printf("reading logical=%p, virtual=%p\n", logicalSliceAddr, virtualSliceAddr);
 		if (virtualSliceAddr != VSA_NONE)
 			return virtualSliceAddr;
 		else
