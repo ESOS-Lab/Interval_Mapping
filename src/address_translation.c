@@ -688,7 +688,6 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 		else virtualSliceAddr = it.payload();
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
-       xil_printf("reading logical=%p, virtual=%p\n", logicalSliceAddr, virtualSliceAddr);
 		if (virtualSliceAddr != VSA_NONE)
 			return virtualSliceAddr;
 		else
