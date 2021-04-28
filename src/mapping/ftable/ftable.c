@@ -1,11 +1,11 @@
 /*
- * focusing_table.c
+ * ftable.c
  *
  *  Created on: 2021. 4. 26.
  *      Author: Minsu Jang (nobleminsu@gmail.com)
  */
 
-#include "focusing_table.h"
+#include "ftable.h"
 
 #include <assert.h>
 
@@ -14,7 +14,7 @@
 
 char *ftableMemPool = RESERVED0_START_ADDR;
 
-FTable focusingTable[FTABLE_TABLE_NUM];
+FTable ftables[FTABLE_TABLE_NUM];
 int curMaxFocusingTableIdx = -1;
 
 int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr);
@@ -27,35 +27,35 @@ FTable *ftable_create(unsigned int focusingHeadAddr) {
         assert(!"Cannot create more tables. Please increase FTABLE_TABLE_NUM.");
     }
 
-    focusingTable[curMaxFocusingTableIdx].capacity = FTABLE_DEFAULT_CAPACITY;
+    ftables[curMaxFocusingTableIdx].capacity = FTABLE_DEFAULT_CAPACITY;
 
-    focusingTable[curMaxFocusingTableIdx].headIndex = 0;
-    focusingTable[curMaxFocusingTableIdx].filled = 0;
-    focusingTable[curMaxFocusingTableIdx].invalidatedBeforeNextSlideHead = 0;
-    focusingTable[curMaxFocusingTableIdx].invalidatedAfterNextSlideHead = 0;
+    ftables[curMaxFocusingTableIdx].headIndex = 0;
+    ftables[curMaxFocusingTableIdx].filled = 0;
+    ftables[curMaxFocusingTableIdx].invalidatedBeforeNextSlideHead = 0;
+    ftables[curMaxFocusingTableIdx].invalidatedAfterNextSlideHead = 0;
 
-    focusingTable[curMaxFocusingTableIdx].afterSlideRatio =
+    ftables[curMaxFocusingTableIdx].afterSlideRatio =
         FTABLE_DEFAULT_AFTER_SLIDE_RATIO;
-    focusingTable[curMaxFocusingTableIdx].invalidatedSlideThresholdRatio =
+    ftables[curMaxFocusingTableIdx].invalidatedSlideThresholdRatio =
         FTABLE_DEFAULT_INVALIDATED_SLIDE_THR_RATIO;
-    focusingTable[curMaxFocusingTableIdx].focusingHeadAddr = focusingHeadAddr;
-    focusingTable[curMaxFocusingTableIdx].mappingUnit =
+    ftables[curMaxFocusingTableIdx].focusingHeadAddr = focusingHeadAddr;
+    ftables[curMaxFocusingTableIdx].mappingUnit =
         BYTES_PER_DATA_REGION_OF_SLICE;
 
-    focusingTable[curMaxFocusingTableIdx].entries = ftableMemPool;
-    ftableMemPool += focusingTable[curMaxFocusingTableIdx].capacity *
+    ftables[curMaxFocusingTableIdx].entries = ftableMemPool;
+    ftableMemPool += ftables[curMaxFocusingTableIdx].capacity *
                      sizeof(LOGICAL_SLICE_ENTRY);
 
     int i;
-    for (i = 0; i < focusingTable[curMaxFocusingTableIdx].capacity; i++) {
-        focusingTable[curMaxFocusingTableIdx].entries[i].virtualSliceAddr =
+    for (i = 0; i < ftables[curMaxFocusingTableIdx].capacity; i++) {
+        ftables[curMaxFocusingTableIdx].entries[i].virtualSliceAddr =
             VSA_NONE;
     }
 
     xil_printf("ftable created for %p, ftableMemPool is now %p\n",
-               focusingTable[curMaxFocusingTableIdx].entries, ftableMemPool);
+               ftables[curMaxFocusingTableIdx].entries, ftableMemPool);
 
-    return &focusingTable[curMaxFocusingTableIdx];
+    return &ftables[curMaxFocusingTableIdx];
 }
 
 int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
@@ -101,8 +101,8 @@ int ftable_invalidate(FTable *ftable, unsigned int sliceAddr) {
 int ftable_select_or_create_table(unsigned int sliceAddr) {
     int i;
     for (i = 0; i <= curMaxFocusingTableIdx; i++) {
-        if (ftable_addr_to_raw_index(focusingTable[i], sliceAddr) > -1) {
-            return focusingTable[i];
+        if (ftable_addr_to_raw_index(ftables[i], sliceAddr) > -1) {
+            return ftables[i];
         }
     }
     return ftable_create(sliceAddr);

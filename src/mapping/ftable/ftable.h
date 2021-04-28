@@ -1,12 +1,12 @@
 /*
- * focusing_table.h
+ * ftable.h
  *
  *  Created on: 2021. 4. 26.
  *      Author: Minsu Jang (nobleminsu@gmail.com)
  */
 
-#ifndef SRC_FOCUSING_TABLE_H_
-#define SRC_FOCUSING_TABLE_H_
+#ifndef SRC_FTABLE_H_
+#define SRC_FABLE_H_
 
 #include "../address_translation.h"
 
@@ -15,7 +15,7 @@
 #define FTABLE_DEFAULT_AFTER_SLIDE_RATIO 0.2
 #define FTABLE_DEFAULT_INVALIDATED_SLIDE_THR_RATIO 0.8
 
-typedef struct focusing_table {
+typedef struct ftable {
 	LOGICAL_SLICE_ENTRY *entries;
 	size_t capacity;
 
@@ -37,4 +37,4 @@ int ftable_get(FTable *ftable, unsigned int sliceAddr);
 int ftable_invalidate(FTable *ftable, unsigned int sliceAddr);
 int ftable_select_or_create_table(unsigned int sliceAddr);
 
-#endif /* SRC_FOCUSING_TABLE_H_ */
+#endif /* SRC_FTABLE_H_ */
