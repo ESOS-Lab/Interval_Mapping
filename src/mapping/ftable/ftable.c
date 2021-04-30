@@ -15,46 +15,49 @@
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
-FTable ftables[FTABLE_TABLE_NUM];
-int curMaxFTableIdx = -1;
+// FTable ftables[FTABLE_TABLE_NUM];
+// int curMaxFTableIdx = -1;
 
 int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr);
 void ftable_slide(FTable *ftable);
 unsigned int ftable_get_next_slide_head_addr(FTable *ftable);
 
-FTable *ftable_create(unsigned int focusingHeadAddr) {
-    curMaxFTableIdx++;
-    if (curMaxFTableIdx >= FTABLE_TABLE_NUM) {
-        assert(!"Cannot create more tables. Please increase FTABLE_TABLE_NUM.");
+FTable *ftable_create_table(unsigned int focusingHeadAddr, FTable ftables[],
+                            int *curMaxFTableIdx, int maxFTableIndex) {
+    *curMaxFTableIdx++;
+    if (*curMaxFTableIdx >= maxFTableIndex) {
+        assert(!"Cannot create more tables. Please increase maxFTableIndex.");
     }
 
-    ftables[curMaxFTableIdx].capacity = FTABLE_DEFAULT_CAPACITY;
+    ftables[*curMaxFTableIdx].capacity = FTABLE_DEFAULT_CAPACITY;
+    ftables[*curMaxFTableIdx].initialHeadAddr = focusingHeadAddr;
 
-    ftables[curMaxFTableIdx].headIndex = 0;
-    ftables[curMaxFTableIdx].filledBeforeNextSlideHead = 0;
-    ftables[curMaxFTableIdx].filledAfterNextSlideHead = 0;
-    ftables[curMaxFTableIdx].invalidatedBeforeNextSlideHead = 0;
-    ftables[curMaxFTableIdx].invalidatedAfterNextSlideHead = 0;
+    ftables[*curMaxFTableIdx].headIndex = 0;
+    ftables[*curMaxFTableIdx].filledBeforeNextSlideHead = 0;
+    ftables[*curMaxFTableIdx].filledAfterNextSlideHead = 0;
+    ftables[*curMaxFTableIdx].invalidatedBeforeNextSlideHead = 0;
+    ftables[*curMaxFTableIdx].invalidatedAfterNextSlideHead = 0;
 
-    ftables[curMaxFTableIdx].afterSlideRatio = FTABLE_DEFAULT_AFTER_SLIDE_RATIO;
-    ftables[curMaxFTableIdx].invalidatedSlideThresholdRatio =
+    ftables[*curMaxFTableIdx].afterSlideRatio =
+        FTABLE_DEFAULT_AFTER_SLIDE_RATIO;
+    ftables[*curMaxFTableIdx].invalidatedSlideThresholdRatio =
         FTABLE_DEFAULT_INVALIDATED_SLIDE_THR_RATIO;
-    ftables[curMaxFTableIdx].focusingHeadAddr = focusingHeadAddr;
-    ftables[curMaxFTableIdx].mappingUnit = BYTES_PER_DATA_REGION_OF_SLICE;
+    ftables[*curMaxFTableIdx].focusingHeadAddr = focusingHeadAddr;
+    ftables[*curMaxFTableIdx].mappingUnit = BYTES_PER_DATA_REGION_OF_SLICE;
 
-    ftables[curMaxFTableIdx].entries = (LOGICAL_SLICE_ENTRY *)ftableMemPool;
+    ftables[*curMaxFTableIdx].entries = (LOGICAL_SLICE_ENTRY *)ftableMemPool;
     ftableMemPool +=
-        ftables[curMaxFTableIdx].capacity * sizeof(LOGICAL_SLICE_ENTRY);
+        ftables[*curMaxFTableIdx].capacity * sizeof(LOGICAL_SLICE_ENTRY);
 
     int i;
-    for (i = 0; i < ftables[curMaxFTableIdx].capacity; i++) {
-        ftables[curMaxFTableIdx].entries[i].virtualSliceAddr = VSA_NONE;
+    for (i = 0; i < ftables[*curMaxFTableIdx].capacity; i++) {
+        ftables[*curMaxFTableIdx].entries[i].virtualSliceAddr = VSA_NONE;
     }
 
     xil_printf("ftable created for %p, ftableMemPool is now %p\n",
-               ftables[curMaxFTableIdx].entries, ftableMemPool);
+               ftables[*curMaxFTableIdx].entries, ftableMemPool);
 
-    return &ftables[curMaxFTableIdx];
+    return &ftables[*curMaxFTableIdx];
 }
 
 int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
@@ -114,14 +117,15 @@ int ftable_invalidate(FTable *ftable, unsigned int sliceAddr) {
 
 // Select a table that contains sliceAddr translation data.
 // If not, create one table and put data in it.
-FTable *ftable_select_or_create_table(unsigned int sliceAddr) {
+FTable *ftable_select_table(unsigned int sliceAddr, FTable ftables[],
+                            int curMaxFTableIdx) {
     int i;
     for (i = 0; i <= curMaxFTableIdx; i++) {
         if (ftable_addr_to_raw_index(&ftables[i], sliceAddr) > -1) {
             return &ftables[i];
         }
     }
-    return ftable_create(sliceAddr);
+    return NULL;
 }
 
 // Convert given addr to the index in the FTable.
@@ -164,4 +168,21 @@ void ftable_slide(FTable *ftable) {
 unsigned int ftable_get_next_slide_head_addr(FTable *ftable) {
     return ftable->focusingHeadAddr + ftable->mappingUnit * ftable->capacity *
                                           (1 - ftable->afterSlideRatio);
+}
+
+int ftable_get_entry_state(unsigned int sliceAddr, FTable ftables[],
+                           int tableLength) {
+    int i;
+    for (i = 0; i < tableLength; i++) {
+        if (ftables[i].initialHeadAddr <= sliceAddr &&
+            sliceAddr < ftables[i].focusingHeadAddr) {
+            return FTABLE_ENTRY_SLIDED;
+        } else if (ftables[i].focusingHeadAddr <= sliceAddr &&
+                   sliceAddr <=
+                       ftables[i].focusingHeadAddr +
+                           ftables[i].mappingUnit * ftables[i].capacity) {
+            return FTABLE_ENTRY_ACTIVE;
+        }
+    }
+    return FTABLE_ENTRY_NOT_COVERED;
 }
