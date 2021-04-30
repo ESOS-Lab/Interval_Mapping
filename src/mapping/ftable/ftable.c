@@ -31,7 +31,8 @@ FTable *ftable_create(unsigned int focusingHeadAddr) {
     ftables[curMaxFTableIdx].capacity = FTABLE_DEFAULT_CAPACITY;
 
     ftables[curMaxFTableIdx].headIndex = 0;
-    ftables[curMaxFTableIdx].filled = 0;
+    ftables[curMaxFTableIdx].filledBeforeNextSlideHead = 0;
+    ftables[curMaxFTableIdx].filledAfterNextSlideHead = 0;
     ftables[curMaxFTableIdx].invalidatedBeforeNextSlideHead = 0;
     ftables[curMaxFTableIdx].invalidatedAfterNextSlideHead = 0;
 
@@ -60,9 +61,21 @@ int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
                   unsigned int virtualSliceAddr) {
     unsigned int index = ftable_addr_to_raw_index(ftable, logicalSliceAddr);
     if (index < 0) assert(!"index is not valid for FTable");
+    // if entry is newly written, increment filled count
+    if (ftable->entries[index].virtualSliceAddr == VSA_NONE) {
+        unsigned int nextSlideHeadAddr =
+            ftable_get_next_slide_head_addr(ftable);
+        if (logicalSliceAddr < nextSlideHeadAddr)
+            ftable->filledBeforeNextSlideHead++;
+        else
+            ftable->filledAfterNextSlideHead;
+    }
+
     ftable->entries[index].virtualSliceAddr = virtualSliceAddr;
 
-    if (index == ftable->capacity) {
+    // if table is fully filled, slide
+    if ((ftable->filledBeforeNextSlideHead +
+         ftable->filledAfterNextSlideHead) == ftable->capacity) {
         ftable_slide(ftable);
     }
 }
@@ -76,13 +89,18 @@ int ftable_get(FTable *ftable, unsigned int sliceAddr) {
 int ftable_invalidate(FTable *ftable, unsigned int sliceAddr) {
     unsigned int index = ftable_addr_to_raw_index(ftable, sliceAddr);
     if (index < 0) assert(!"index is not valid for FTable");
-    ftable->entries[index].virtualSliceAddr = VSA_NONE;
 
-    unsigned int nextSlideHeadAddr = ftable_get_next_slide_head_addr(ftable);
-    if (sliceAddr < nextSlideHeadAddr)
-        ftable->invalidatedBeforeNextSlideHead++;
-    else
-        ftable->invalidatedAfterNextSlideHead++;
+    if (ftable->entries[index].virtualSliceAddr != VSA_NONE) {
+        unsigned int nextSlideHeadAddr =
+            ftable_get_next_slide_head_addr(ftable);
+        if (sliceAddr < nextSlideHeadAddr)
+            ftable->invalidatedBeforeNextSlideHead++;
+        else
+            ftable->invalidatedAfterNextSlideHead++;
+
+        ftable->entries[index].virtualSliceAddr = VSA_NONE;
+    } else
+        assert(!"trying to invalidate unmapped entry");
 
     // if ratio of the invalidated entries before the next slide head addr
     // exceeds the threshold, slide FTable.
@@ -115,6 +133,7 @@ int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
         return -1;
     }
 
+    // if index exceeds the capacity, start from the top.
     if (index > ftable->capacity) {
         return index - ftable->capacity;
     }
@@ -128,11 +147,16 @@ int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
 // 2. The number of invalidated items exceeds certain threshold.
 void ftable_slide(FTable *ftable) {
     unsigned int slidedHeadAddr = ftable_get_next_slide_head_addr(ftable);
-    ftable->headIndex = ftable_addr_to_raw_index(ftable, slidedHeadAddr);
+    unsigned int nextHeadIndex =
+        ftable_addr_to_raw_index(ftable, slidedHeadAddr);
+
     ftable->focusingHeadAddr = slidedHeadAddr;
-    // migrate invalidated count
+    ftable->headIndex = nextHeadIndex;
+
+    ftable->filledBeforeNextSlideHead = ftable->filledAfterNextSlideHead;
     ftable->invalidatedBeforeNextSlideHead =
         ftable->invalidatedAfterNextSlideHead;
+    // migrate invalidated count
 
     // handle evicted entries
 }

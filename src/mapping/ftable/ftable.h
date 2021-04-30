@@ -20,7 +20,8 @@ typedef struct ftable {
     size_t capacity;
 
     unsigned int headIndex;  // start of index for head
-    size_t filled;
+    size_t filledBeforeNextSlideHead;
+	size_t filledAfterNextSlideHead;
     size_t invalidatedBeforeNextSlideHead;
     size_t invalidatedAfterNextSlideHead;
 
