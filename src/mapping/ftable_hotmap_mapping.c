@@ -14,6 +14,11 @@ alex::Alex<unsigned int, unsigned int> hotmap;
 int curMaxFtableIdx = -1;
 FTable hotFTables[FTABLE_DEFAULT_TABLE_NUM];
 
+void fhm_migrate_ftable_entry_to_hotmap(unsigned int logicalSliceAddr,
+                                        unsigned int virtualSliceAddr) {
+    hotmap.insert(logicalSliceAddr, virtualSliceAddr);
+}
+
 void fhm_insert(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr) {
     FTable *ftable;
 
@@ -22,19 +27,21 @@ void fhm_insert(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr) {
     if (entryState == FTABLE_ENTRY_ACTIVE) {
         ftable =
             ftable_select_table(logicalSliceAddr, hotFTables, curMaxFtableIdx);
-        ftable_insert(ftable, logicalSliceAddr, virtualSliceAddr);
+        ftable_insert(ftable, logicalSliceAddr, virtualSliceAddr,
+                      fhm_migrate_ftable_entry_to_hotmap);
     } else if (entryState == FTABLE_ENTRY_NOT_COVERED) {
         ftable =
             ftable_create_table(logicalSliceAddr, hotFTables, &curMaxFtableIdx,
                                 FTABLE_DEFAULT_TABLE_NUM);
-        ftable_insert(ftable, logicalSliceAddr, virtualSliceAddr);
+        ftable_insert(ftable, logicalSliceAddr, virtualSliceAddr,
+                      fhm_migrate_ftable_entry_to_hotmap);
     } else if (entryState == FTABLE_ENTRY_SLIDED) {
         hotmap.insert(logicalSliceAddr, virtualSliceAddr);
     }
 }
 unsigned int fhm_get(unsigned int sliceAddr) {
-    int entryState = ftable_get_entry_state(sliceAddr, hotFTables,
-                                            FTABLE_DEFAULT_TABLE_NUM);
+    int entryState =
+        ftable_get_entry_state(sliceAddr, hotFTables, FTABLE_DEFAULT_TABLE_NUM);
     if (entryState == FTABLE_ENTRY_ACTIVE) {
         FTable *ftable =
             ftable_select_table(sliceAddr, hotFTables, curMaxFtableIdx);
@@ -47,12 +54,13 @@ unsigned int fhm_get(unsigned int sliceAddr) {
     return VSA_NONE;
 }
 void fhm_remove(unsigned int sliceAddr) {
-    int entryState = ftable_get_entry_state(sliceAddr, hotFTables,
-                                            FTABLE_DEFAULT_TABLE_NUM);
+    int entryState =
+        ftable_get_entry_state(sliceAddr, hotFTables, FTABLE_DEFAULT_TABLE_NUM);
     if (entryState == FTABLE_ENTRY_ACTIVE) {
         FTable *ftable =
             ftable_select_table(sliceAddr, hotFTables, curMaxFtableIdx);
-        ftable_invalidate(ftable, sliceAddr);
+        ftable_invalidate(ftable, sliceAddr,
+                          fhm_migrate_ftable_entry_to_hotmap);
     } else if (entryState == FTABLE_ENTRY_NOT_COVERED) {
     } else if (entryState == FTABLE_ENTRY_SLIDED) {
         hotmap.erase(sliceAddr);

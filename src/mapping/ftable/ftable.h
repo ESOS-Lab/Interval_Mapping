@@ -46,9 +46,11 @@ typedef struct ftable {
 FTable *ftable_create_table(unsigned int focusingHeadAddr, FTable ftables[],
                             int *curMaxFTableIdx, int maxFTableIndex);
 int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
-                  unsigned int virtualSliceAddr);
+                  unsigned int virtualSliceAddr,
+                  void (*migrationHandler)(unsigned int, unsigned int));
 int ftable_get(FTable *ftable, unsigned int sliceAddr);
-int ftable_invalidate(FTable *ftable, unsigned int sliceAddr);
+int ftable_invalidate(FTable *ftable, unsigned int sliceAddr,
+                      void (*migrationHandler)(unsigned int, unsigned int));
 FTable *ftable_select_table(unsigned int sliceAddr, FTable ftables[],
                             int curMaxFTableIdx);
 int ftable_get_entry_state(unsigned int sliceAddr, FTable ftables[],
