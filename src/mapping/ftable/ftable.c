@@ -24,7 +24,7 @@ unsigned int ftable_get_next_slide_head_addr(FTable *ftable);
 
 FTable *ftable_create_table(unsigned int focusingHeadAddr, FTable ftables[],
                             int *curMaxFTableIdx, int maxFTableIndex) {
-    *curMaxFTableIdx++;
+    *curMaxFTableIdx = *curMaxFTableIdx + 1;
     if (*curMaxFTableIdx >= maxFTableIndex) {
         assert(!"Cannot create more tables. Please increase maxFTableIndex.");
     }
