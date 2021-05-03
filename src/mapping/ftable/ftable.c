@@ -75,9 +75,15 @@ int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
 
     ftable->entries[index].virtualSliceAddr = virtualSliceAddr;
 
-    // if table is fully filled, slide
-    if ((ftable->filledBeforeNextSlideHead +
-         ftable->filledAfterNextSlideHead) == ftable->capacity) {
+    // if (FTABLE_DEBUG)
+    //     xil_printf("ftable insert logical=%p, virtual=%p, insertedTo=%d\n",
+    //                logicalSliceAddr, virtualSliceAddr, index);
+
+    // if table is almost filled, slide
+    // this assumes that sliceAddrs are accessed linearly
+    if (logicalSliceAddr >=
+        ftable->focusingHeadAddr +
+            (ftable->capacity) * FTABLE_DEFAULT_INSERT_SLIDE_THRE_RATIO) {
         ftable_slide(ftable);
     }
 }
@@ -145,7 +151,7 @@ int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
 // Slide focusingHead at address which is 'afterSlideRatio' ahead from the max
 // address.
 // Triggered by two condition
-// 1. Table is completely filled.
+// 1. Table is almost filled.
 // 2. The number of invalidated items exceeds certain threshold.
 void ftable_slide(FTable *ftable) {
     unsigned int slidedHeadAddr = ftable_get_next_slide_head_addr(ftable);
