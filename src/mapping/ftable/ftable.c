@@ -142,7 +142,7 @@ int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
     }
 
     // if index exceeds the capacity, start from the top.
-    if (index > ftable->capacity) {
+    if (index >= ftable->capacity) {
         return index - ftable->capacity;
     }
     return index;
