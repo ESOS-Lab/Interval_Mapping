@@ -8,8 +8,8 @@
 #ifndef SRC_FTABLE_HOTMAP_MAPPING_H_
 #define SRC_FTABLE_HOTMAP_MAPPING_H_
 
-void fhm_insert(unsigned int sliceAddr);
-void fhm_get(unsigned int sliceAddr);
+void fhm_insert(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr);
+unsigned int fhm_get(unsigned int sliceAddr);
 void fhm_remove(unsigned int sliceAddr);
 void fhm_is_in_ftable(unsigned int sliceAddr);
 
