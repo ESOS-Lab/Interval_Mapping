@@ -89,12 +89,15 @@ int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
 }
 
 int ftable_get(FTable *ftable, unsigned int sliceAddr) {
+    // if (FTABLE_DEBUG) xil_printf("ftable get logical=%p\n", sliceAddr);
     unsigned int index = ftable_addr_to_raw_index(ftable, sliceAddr);
     if (index < 0) assert(!"index is not valid for FTable");
     return ftable->entries[index].virtualSliceAddr;
 }
 
 int ftable_invalidate(FTable *ftable, unsigned int sliceAddr) {
+    // if (FTABLE_DEBUG) xil_printf("ftable invalidate logical=%p\n",
+    // sliceAddr);
     unsigned int index = ftable_addr_to_raw_index(ftable, sliceAddr);
     if (index < 0) assert(!"index is not valid for FTable");
 
@@ -154,6 +157,8 @@ int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
 // 1. Table is almost filled.
 // 2. The number of invalidated items exceeds certain threshold.
 void ftable_slide(FTable *ftable) {
+    unsigned int prevHeadAddr = ftable->focusingHeadAddr;
+    unsigned int prevHeadIndex = ftable->headIndex;
     unsigned int slidedHeadAddr = ftable_get_next_slide_head_addr(ftable);
     unsigned int nextHeadIndex =
         ftable_addr_to_raw_index(ftable, slidedHeadAddr);
@@ -161,10 +166,14 @@ void ftable_slide(FTable *ftable) {
     ftable->focusingHeadAddr = slidedHeadAddr;
     ftable->headIndex = nextHeadIndex;
 
+    // migrate invalidated count
     ftable->filledBeforeNextSlideHead = ftable->filledAfterNextSlideHead;
     ftable->invalidatedBeforeNextSlideHead =
         ftable->invalidatedAfterNextSlideHead;
-    // migrate invalidated count
+
+    if (FTABLE_DEBUG)
+        xil_printf("ftable slide headAddr=%d->%d, headIndex=%d->%d\n",
+                   prevHeadAddr, slidedHeadAddr, prevHeadIndex, nextHeadIndex);
 
     // handle evicted entries
 }

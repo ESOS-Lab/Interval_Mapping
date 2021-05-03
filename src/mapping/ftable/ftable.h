@@ -20,6 +20,8 @@
 #define FTABLE_ENTRY_ACTIVE 1
 #define FTABLE_ENTRY_SLIDED 2
 
+#define FTABLE_DEBUG 1
+
 typedef struct ftable {
     LOGICAL_SLICE_ENTRY *entries;
     size_t capacity;
