@@ -38,7 +38,6 @@ typedef struct ftable {
 
     unsigned int focusingHeadAddr;  // current head, where headIndex points to
                                     // the entry of this value
-    unsigned int mappingUnit;       // unit of mapping for an entry
 } FTable;
 
 FTable *ftable_create_table(unsigned int focusingHeadAddr, FTable ftables[],

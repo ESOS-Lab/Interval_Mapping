@@ -43,7 +43,6 @@ FTable *ftable_create_table(unsigned int focusingHeadAddr, FTable ftables[],
     ftables[*curMaxFTableIdx].invalidatedSlideThresholdRatio =
         FTABLE_DEFAULT_INVALIDATED_SLIDE_THR_RATIO;
     ftables[*curMaxFTableIdx].focusingHeadAddr = focusingHeadAddr;
-    ftables[*curMaxFTableIdx].mappingUnit = BYTES_PER_DATA_REGION_OF_SLICE;
 
     ftables[*curMaxFTableIdx].entries = (LOGICAL_SLICE_ENTRY *)ftableMemPool;
     ftableMemPool +=
@@ -130,8 +129,7 @@ FTable *ftable_select_table(unsigned int sliceAddr, FTable ftables[],
 
 // Convert given addr to the index in the FTable.
 int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
-    unsigned index =
-        (sliceAddr - ftable->focusingHeadAddr) / ftable->mappingUnit;
+    unsigned index = ftable->headIndex + (sliceAddr - ftable->focusingHeadAddr);
 
     if (index > ftable->headIndex + ftable->capacity) {
         return -1;
@@ -166,8 +164,8 @@ void ftable_slide(FTable *ftable) {
 }
 
 unsigned int ftable_get_next_slide_head_addr(FTable *ftable) {
-    return ftable->focusingHeadAddr + ftable->mappingUnit * ftable->capacity *
-                                          (1 - ftable->afterSlideRatio);
+    return ftable->focusingHeadAddr +
+           ftable->capacity * (1 - ftable->afterSlideRatio);
 }
 
 int ftable_get_entry_state(unsigned int sliceAddr, FTable ftables[],
@@ -178,9 +176,8 @@ int ftable_get_entry_state(unsigned int sliceAddr, FTable ftables[],
             sliceAddr < ftables[i].focusingHeadAddr) {
             return FTABLE_ENTRY_SLIDED;
         } else if (ftables[i].focusingHeadAddr <= sliceAddr &&
-                   sliceAddr <=
-                       ftables[i].focusingHeadAddr +
-                           ftables[i].mappingUnit * ftables[i].capacity) {
+                   sliceAddr <
+                       ftables[i].focusingHeadAddr + ftables[i].capacity) {
             return FTABLE_ENTRY_ACTIVE;
         }
     }
