@@ -74,6 +74,7 @@
 #include "nvme/host_lld.h"
 
 #include "alex/alex.h"
+#include "mapping/mapping_test.h"
 
 XScuGic GicInstance;
 
@@ -136,6 +137,10 @@ int main()
 //	index.insert(2, 14);
 //	int out = index.find(1).payload();
 //	xil_printf("found item %d\n", out);
+
+	test_ftable();
+	test_hotmap();
+	test_fhm();
 
 	nvme_main();
 
