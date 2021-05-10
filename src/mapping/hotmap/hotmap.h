@@ -10,6 +10,8 @@
 
 #include "../../alex/alex.h"
 
+#define DEBUG_HOTMAP 0
+
 void hotmap_insert(alex::Alex<unsigned int, unsigned int> &hotmap,
                    unsigned int logicalSliceAddr,
                    unsigned int virtualSliceAddr);
