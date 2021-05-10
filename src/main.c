@@ -138,9 +138,9 @@ int main()
 //	int out = index.find(1).payload();
 //	xil_printf("found item %d\n", out);
 
-	test_ftable();
-	test_hotmap();
-	test_fhm();
+	// test_ftable();
+	// test_hotmap();
+	// test_fhm();
 
 	nvme_main();
 

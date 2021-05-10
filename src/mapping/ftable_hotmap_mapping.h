@@ -12,5 +12,6 @@ void fhm_insert(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr);
 unsigned int fhm_get(unsigned int sliceAddr);
 void fhm_remove(unsigned int sliceAddr);
 void fhm_is_in_ftable(unsigned int sliceAddr);
+void fhm_update(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr);
 
 #endif /* SRC_FTABLE_HOTMAP_MAPPING_H_ */

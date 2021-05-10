@@ -97,6 +97,17 @@ int ftable_get(FTable *ftable, unsigned int sliceAddr) {
     return ftable->entries[index].virtualSliceAddr;
 }
 
+void ftable_update(FTable *ftable, unsigned int logicalSliceAddr,
+                   unsigned int virtualSliceAddr) {
+    unsigned int index = ftable_addr_to_raw_index(ftable, logicalSliceAddr);
+    if (index < 0) assert(!"index is not valid for FTable");
+    if (ftable->entries[index].virtualSliceAddr != VSA_NONE) {
+        ftable->entries[index].virtualSliceAddr = virtualSliceAddr;
+    } else {
+        assert(!"trying to update not assigned entry");
+    }
+}
+
 int ftable_invalidate(FTable *ftable, unsigned int sliceAddr,
                       void (*migrationHandler)(unsigned int, unsigned int)) {
     // if (FTABLE_DEBUG) xil_printf("ftable invalidate logical=%p\n",

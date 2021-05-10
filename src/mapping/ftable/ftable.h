@@ -55,5 +55,7 @@ FTable *ftable_select_table(unsigned int sliceAddr, FTable ftables[],
                             int curMaxFTableIdx);
 int ftable_get_entry_state(unsigned int sliceAddr, FTable ftables[],
                            int tableLength);
+void ftable_update(FTable *ftable, unsigned int logicalSliceAddr,
+                   unsigned int virtualSliceAddr);
 
 #endif /* SRC_MAPPING_FTABLE_FTABLE_H_ */
