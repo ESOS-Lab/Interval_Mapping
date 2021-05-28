@@ -8,6 +8,15 @@
 #ifndef SRC_FTABLE_HOTMAP_MAPPING_H_
 #define SRC_FTABLE_HOTMAP_MAPPING_H_
 
+#define MODE_ALEX 0
+#define MODE_PGM 1
+#define CUR_MODE MODE_PGM
+#if CUR_MODE == MODE_PGM
+#define CUR_PGM
+#elif CUR_MODE == MODE_ALEX
+#define CUR_ALEX
+#endif
+
 void fhm_insert(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr);
 unsigned int fhm_get(unsigned int sliceAddr);
 void fhm_remove(unsigned int sliceAddr);

@@ -5,7 +5,7 @@
  *      Author: noble
  */
 
-#include "hotmap.h"
+#include "../hotmap/hotmap_alex.h"
 
 #include <xil_printf.h>
 

@@ -9,7 +9,7 @@
 
 #include "ftable/ftable.h"
 #include "ftable_hotmap_mapping.h"
-#include "hotmap/hotmap.h"
+#include "hotmap/hotmap_alex.h"
 
 alex::Alex<unsigned int, unsigned int> testHotmap;
 int testCurMaxFtableIdx = -1;

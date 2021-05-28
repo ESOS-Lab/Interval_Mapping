@@ -5,8 +5,8 @@
  *      Author: noble
  */
 
-#ifndef SRC_MAPPING_HOTMAP_HOTMAP_H_
-#define SRC_MAPPING_HOTMAP_HOTMAP_H_
+#ifndef SRC_MAPPING_HOTMAP_HOTMAP_ALEX_H_
+#define SRC_MAPPING_HOTMAP_HOTMAP_ALEX_H_
 
 #include "../../alex/alex.h"
 
@@ -23,4 +23,4 @@ void hotmap_update(alex::Alex<unsigned int, unsigned int> &hotmap,
                    unsigned int logicalSliceAddr,
                    unsigned int virtualSliceAddr);
 
-#endif /* SRC_MAPPING_HOTMAP_HOTMAP_H_ */
+#endif /* SRC_MAPPING_HOTMAP_HOTMAP_ALEX_H_ */
