@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 #include "../pgm/piecewise_linear_model.hpp"
+#include "../alex/openssd_allocator.h"
 
 namespace pgm {
 
@@ -75,14 +76,14 @@ protected:
 
     size_t n;                           ///< The number of elements this index was built on.
     K first_key;                        ///< The smallest element.
-    std::vector<Segment> segments;      ///< The segments composing the index.
-    std::vector<size_t> levels_offsets; ///< The starting position of each level in segments[], in reverse order.
+    std::vector<Segment, OpenSSDAllocator<Segment>> segments;      ///< The segments composing the index.
+    std::vector<size_t, OpenSSDAllocator<size_t>> levels_offsets; ///< The starting position of each level in segments[], in reverse order.
 
     template<typename RandomIt>
     static void build(RandomIt first, RandomIt last,
                       size_t epsilon, size_t epsilon_recursive,
-                      std::vector<Segment> &segments,
-                      std::vector<size_t> &levels_offsets) {
+                      std::vector<Segment, OpenSSDAllocator<Segment>> &segments,
+                      std::vector<size_t, OpenSSDAllocator<size_t>> &levels_offsets) {
         auto n = (size_t) std::distance(first, last);
         if (n == 0)
             return;

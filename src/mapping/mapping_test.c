@@ -11,7 +11,7 @@
 #include "ftable_hotmap_mapping.h"
 #include "hotmap/hotmap_alex.h"
 
-alex::Alex<unsigned int, unsigned int> testHotmap;
+// alex::Alex<unsigned int, unsigned int> testHotmap;
 int testCurMaxFtableIdx = -1;
 FTable testHotFTables[FTABLE_DEFAULT_TABLE_NUM];
 

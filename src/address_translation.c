@@ -49,6 +49,7 @@
 #include "memory_map.h"
 #include "xil_printf.h"
 #include "mapping/ftable_hotmap_mapping.h"
+#include "smalloc/smalloc.h"
 
 //P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
@@ -90,6 +91,8 @@ void InitAddressMap() {
 
 	InitSliceMap();
 	InitBlockDieMap();
+
+	xil_printf("init with %p\n", allocator_start_addr);
 }
 
 void InitSliceMap() {

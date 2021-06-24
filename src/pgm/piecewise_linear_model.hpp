@@ -24,6 +24,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "../alex/openssd_allocator.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -65,8 +66,8 @@ private:
     };
 
     const Y epsilon;
-    std::vector<Point> lower;
-    std::vector<Point> upper;
+    std::vector<Point, OpenSSDAllocator<Point>> lower;
+    std::vector<Point, OpenSSDAllocator<Point>> upper;
     X first_x = 0;
     X last_x = 0;
     size_t lower_start = 0;
@@ -312,7 +313,7 @@ size_t make_segmentation_par(size_t n, size_t epsilon, Fin in, Fout out) {
     using X = typename std::invoke_result_t<Fin, size_t>::first_type;
     using Y = typename std::invoke_result_t<Fin, size_t>::second_type;
     using canonical_segment = typename OptimalPiecewiseLinearModel<X, Y>::CanonicalSegment;
-    std::vector<std::vector<canonical_segment>> results(parallelism);
+    std::vector<std::vector<canonical_segment>, OpenSSDAllocator<std::vector<canonical_segment>>> results(parallelism);
 
     #pragma omp parallel for reduction(+:c) num_threads(parallelism)
     for (auto i = 0; i < parallelism; ++i) {
@@ -346,7 +347,7 @@ auto make_segmentation(RandomIt first, RandomIt last, size_t epsilon) {
     using pair_type = typename std::pair<key_type, size_t>;
 
     size_t n = std::distance(first, last);
-    std::vector<canonical_segment> out;
+    std::vector<canonical_segment, OpenSSDAllocator<canonical_segment>> out;
     out.reserve(epsilon > 0 ? n / (epsilon * epsilon) : n / 16);
 
     auto in_fun = [first](auto i) { return pair_type(first[i], i); };

@@ -29,6 +29,7 @@
 #include <utility>
 #include <vector>
 #include "../pgm/pgm_index.hpp"
+#include "../alex/openssd_allocator.h"
 
 namespace pgm {
 
@@ -45,7 +46,8 @@ class DynamicPGMIndex {
     class ItemB;
     class Iterator;
 
-    template<typename T, typename A=std::allocator<T>>
+    // template<typename T, typename A=std::allocator<T>>
+    template<typename T, typename A=OpenSSDAllocator<T>>
     class DefaultInitAllocator;
 
     constexpr static uint8_t min_level = 6; ///< 2^min_level-1 is the size of the sorted buffer for new items.
@@ -60,8 +62,8 @@ class DynamicPGMIndex {
     using Level = std::vector<Item, DefaultInitAllocator<Item>>;
 
     uint8_t used_levels;       ///< Equal to 1 + last level whose size is greater than 0, or = min_level if no data.
-    std::vector<Level> levels; ///< (i-min_level)th element is the data array on the ith level.
-    std::vector<PGMType> pgms; ///< (i-MinIndexedLevel)th element is the index on the ith level.
+    std::vector<Level, OpenSSDAllocator<Level>> levels; ///< (i-min_level)th element is the data array on the ith level.
+    std::vector<PGMType, OpenSSDAllocator<PGMType>> pgms; ///< (i-MinIndexedLevel)th element is the index on the ith level.
 
     const Level &level(uint8_t level) const { return levels[level - min_level]; }
     const PGMType &pgm(uint8_t level) const { return pgms[level - MinIndexedLevel]; }
@@ -380,7 +382,7 @@ private:
 
     // from: https://stackoverflow.com/a/21028912
     template<typename T, typename A>
-    class DefaultInitAllocator : public std::allocator<T> {
+    class DefaultInitAllocator : public A {
         typedef std::allocator_traits<A> a_t;
 
     public:
@@ -420,7 +422,7 @@ class LoserTree {
 
     Source k;                  ///< Smallest power of 2 greater than the number of nodes.
     bool first_insert;         ///< true iff still have to construct keys.
-    std::vector<Loser> losers; ///< Vector of size 2k containing loser tree nodes.
+    std::vector<Loser, OpenSSDAllocator<Loser>> losers; ///< Vector of size 2k containing loser tree nodes.
 
     static uint64_t next_pow2(uint64_t x) {
         return x == 1 ? 1 : uint64_t(1) << (sizeof(unsigned long long) * 8 - __builtin_clzll(x - 1));

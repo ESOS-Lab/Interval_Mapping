@@ -9,6 +9,7 @@
 #define SRC_ALEX_OPENSSD_ALLOCATOR_H_
 
 #include <xil_printf.h>
+#include "../smalloc/smalloc.h"
 
 extern const void* allocator_start_addr;
 extern const void* allocator_end_addr;
@@ -16,9 +17,8 @@ extern void* memAddr;
 
 template<class T>
 class OpenSSDAllocator {
-	typedef T value_type;
-
 public:
+	typedef T value_type;
 
 	constexpr OpenSSDAllocator() noexcept {
 	}
@@ -29,13 +29,22 @@ public:
 	}
 
 	T *allocate(std::size_t n) {
-		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
-			throw std::bad_alloc();
+//		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
+//			throw std::bad_alloc();
 
-		T* p = static_cast<T *>(memAddr);
-		memAddr += n * sizeof(T);
+		if (!smalloc_curr_pool.pool) {
+			size_t size = (size_t)allocator_end_addr - (size_t)allocator_start_addr;
+			sm_set_default_pool((void*)allocator_start_addr, size, 0, 0);
 
-		// xil_printf("allocate %p\n", p);
+		}
+
+		// xil_printf("trying to allocate size=%p\n", n * sizeof(T));
+//		T* p = static_cast<T *>(memAddr);
+//		memAddr += n * sizeof(T);
+		T* p = static_cast<T *>(sm_malloc(n * sizeof(T)));
+
+		// xil_printf("allocate %p, size=%p\n", p, n * sizeof(T));
+//		 report(p, n, 1);
 
 		if (memAddr >= allocator_end_addr)
 			throw std::bad_alloc();
@@ -44,7 +53,9 @@ public:
 
 	void deallocate(T *p, std::size_t n) noexcept
 	{
-		// report(p, n, 0);
+		//  xil_printf("deallocate %p, size=%p\n", p, n * sizeof(T));
+		 sm_free(p);
+//		 report(p, n, 0);
 //		std::free(p);
 	}
 
@@ -58,12 +69,12 @@ public:
 	};
 
 private:
-	// void report(T *p, std::size_t n, bool alloc = true) const
-	// {
-	//     std::cout << (alloc ? "Alloc: " : "Dealloc: ") << sizeof(T) * n
-	//               << " bytes at " << std::hex << std::showbase
-	//               << reinterpret_cast<void *>(p) << std::dec << '\n';
-	// }
+//	 void report(T *p, std::size_t n, bool alloc = true) const
+//	 {
+//	     std::cout << (alloc ? "Alloc: " : "Dealloc: ") << sizeof(T) * n
+//	               << " bytes at " << std::hex << std::showbase
+//	               << reinterpret_cast<void *>(p) << std::dec << '\n';
+//	 }
 };
 
 template<class T, class U>

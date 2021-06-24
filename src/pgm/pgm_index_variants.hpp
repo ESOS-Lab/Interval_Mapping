@@ -75,8 +75,8 @@ class CompressedPGMIndex {
     Floating root_slope;                  ///< The slope of the root segment.
     int64_t root_intercept;               ///< The intercept of the root segment.
     size_t root_range;                    ///< The size of the level below the root segment.
-    std::vector<Floating> slopes_table;   ///< The vector containing the slopes used by the segments in the index.
-    std::vector<CompressedLevel> levels;  ///< The levels composing the compressed index.
+    std::vector<Floating, class Allocator=OpenSSDAllocator<Floating>> slopes_table;   ///< The vector containing the slopes used by the segments in the index.
+    std::vector<CompressedLevel, class Allocator=OpenSSDAllocator<CompressedLevel>> levels;  ///< The levels composing the compressed index.
 
     using floating_pair = std::pair<Floating, Floating>;
     using canonical_segment = typename internal::OptimalPiecewiseLinearModel<K, size_t>::CanonicalSegment;
@@ -105,8 +105,8 @@ public:
         if (n == 0)
             return;
 
-        std::vector<size_t> levels_offsets({0});
-        std::vector<canonical_segment> segments;
+        std::vector<size_t,class Allocator=OpenSSDAllocator<size_t>> levels_offsets({0});
+        std::vector<canonical_segment, class Allocator=OpenSSDAllocator<canonical_segment>> segments;
         segments.reserve(n / (Epsilon * Epsilon));
 
         auto ignore_last = *std::prev(last) == std::numeric_limits<K>::max(); // max is reserved for padding
@@ -229,7 +229,7 @@ private:
 
     template<typename T, typename Cmp>
     static std::vector<size_t> sort_indexes(const std::vector<T> &v, Cmp cmp) {
-        std::vector<size_t> idx(v.size());
+        std::vector<size_t, class Allocator=OpenSSDAllocator<size_t>> idx(v.size());
         std::iota(idx.begin(), idx.end(), 0);
         std::sort(idx.begin(), idx.end(), cmp);
         return idx;
@@ -237,9 +237,9 @@ private:
 
     static std::tuple<std::vector<Floating>, std::vector<uint32_t>, std::vector<int64_t>>
     merge_slopes(const std::vector<canonical_segment> &segments) {
-        std::vector<K> keys;
-        std::vector<Floating> slopes_table;
-        std::vector<int64_t> intercepts;
+        std::vector<K, class Allocator=OpenSSDAllocator<K>> keys;
+        std::vector<Floating, class Allocator=OpenSSDAllocator<Floating>> slopes_table;
+        std::vector<int64_t, class Allocator=OpenSSDAllocator<int64_t>> intercepts;
         intercepts.reserve(segments.size());
         slopes_table.reserve(segments.size());
 
@@ -247,7 +247,7 @@ private:
         auto sorted_indexes = sort_indexes(segments, cmp);
         auto[current_min, current_max] = segments[sorted_indexes[0]].get_slope_range();
 
-        std::vector<uint32_t> mapping(segments.size());
+        std::vector<uint32_t, class Allocator=OpenSSDAllocator<unit32_t>> mapping(segments.size());
         mapping[sorted_indexes[0]] = 0;
 
         for (size_t i = 1; i < sorted_indexes.size(); ++i) {
