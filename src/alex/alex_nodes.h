@@ -1708,7 +1708,7 @@ public:
 		}
 
 		if (ALEXDEBUG)
-			xil_printf("node-insert: key=%d, payload=%d\n", key, payload);
+			xil_printf("node-insert: key=%d, payload=%d, level=%d\n", key, payload, this->level_);
 
 		// Check if node is full (based on expansion_threshold)
 		if (num_keys_ >= expansion_threshold_) {

@@ -12,6 +12,7 @@
 #include "../../ftl_config.h"
 #include "../../memory_map.h"
 #include "xil_printf.h"
+#include "../ftable_hotmap_mapping.h"
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
@@ -184,6 +185,7 @@ void ftable_slide(FTable *ftable,
         for (; tempAddr < slidedHeadAddr; tempAddr++) {
             (*migrationHandler)(tempAddr, ftable_get(ftable, tempAddr));
         }
+        fhm_print_stats();
     }
 
     ftable->focusingHeadAddr = slidedHeadAddr;

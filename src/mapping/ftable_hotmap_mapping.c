@@ -113,3 +113,32 @@ void fhm_update(unsigned int logicalSliceAddr, unsigned int virtualSliceAddr) {
 #endif
     }
 }
+
+void fhm_print_stats() {
+#ifdef CUR_ALEX
+    // struct Stats {
+    // 	int num_keys = 0;
+    // 	int num_model_nodes = 0;  // num model nodes
+    // 	int num_data_nodes = 0;   // num data nodes
+    // 	int num_expand_and_scales = 0;
+    // 	int num_expand_and_retrains = 0;
+    // 	int num_downward_splits = 0;
+    // 	int num_sideways_splits = 0;
+    // 	int num_model_node_expansions = 0;
+    // 	int num_model_node_splits = 0;
+    // 	long long num_downward_split_keys = 0;
+    // 	long long num_sideways_split_keys = 0;
+    // 	long long num_model_node_expansion_pointers = 0;
+    // 	long long num_model_node_split_pointers = 0;
+    // 	mutable long long num_node_lookups = 0;
+    // 	mutable long long num_lookups = 0;
+    // 	long long num_inserts = 0;
+    // 	double splitting_time = 0;
+    // 	double cost_computation_time = 0;
+    // };
+    alex::Alex<unsigned int, unsigned int>::Stats stats = hotmap.get_stats();
+    xil_printf("num_keys=%d, num_model_nodes=%d, num_data_nodes=%d, num_splits=%d\n",
+        stats.num_keys, stats.num_model_nodes, stats.num_data_nodes, stats.num_downward_splits + stats.num_sideways_splits);
+
+#endif
+}
