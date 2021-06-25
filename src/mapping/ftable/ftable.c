@@ -11,8 +11,8 @@
 
 #include "../../ftl_config.h"
 #include "../../memory_map.h"
-#include "xil_printf.h"
 #include "../ftable_hotmap_mapping.h"
+#include "xil_printf.h"
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
@@ -181,6 +181,14 @@ void ftable_slide(FTable *ftable,
 
     // migrate slided mappings
     if (migrationHandler != NULL) {
+        float invalidationRatio = ftable->invalidatedBeforeNextSlideHead /
+                                  (ftable->capacity * ftable->afterSlideRatio);
+        xil_printf(
+            "invalidated[before:count=%d,ratio=%d\%/"
+            "after:count=%d]\n",
+            ftable->invalidatedBeforeNextSlideHead,
+            (int)(invalidationRatio * 100),
+            ftable->invalidatedAfterNextSlideHead);
         unsigned int tempAddr = prevHeadAddr;
         for (; tempAddr < slidedHeadAddr; tempAddr++) {
             (*migrationHandler)(tempAddr, ftable_get(ftable, tempAddr));
