@@ -53,6 +53,7 @@
 #include "nvme/host_lld.h"
 #include "memory_map.h"
 #include "ftl_config.h"
+#include "smalloc/smalloc.h"
 
 P_ROW_ADDR_DEPENDENCY_TABLE rowAddrDependencyTablePtr;
 
@@ -109,6 +110,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = nvmeDmaStartIndex;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = nvmeBlockOffset;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
+	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.isDsmDma = 0;
 
 	PutToSliceReqQ(reqSlotTag);
 
@@ -131,6 +133,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = nvmeDmaStartIndex;
 		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = nvmeBlockOffset;
 		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
+		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.isDsmDma = 0;
 
 		PutToSliceReqQ(reqSlotTag);
 
@@ -154,11 +157,49 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = nvmeDmaStartIndex;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = nvmeBlockOffset;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
+	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.isDsmDma = 0;
 
 	PutToSliceReqQ(reqSlotTag);
 }
 
+void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
+                                unsigned int numRanges, unsigned int dsmAddrH,
+                                unsigned int dsmAddrL, unsigned int dataLen,
+                                int isDeallocate) {
+    unsigned int reqSlotTag;
 
+    reqSlotTag = GetFromFreeReqQ();
+
+    reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NVME_DMA;
+    reqPoolPtr->reqPool[reqSlotTag].reqCode = REQ_CODE_RxDMA;
+    reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag = cmdSlotTag;
+    reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = LSA_NONE;
+    reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = 0;
+    reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = 0;
+    reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = 1;
+	
+	// mark as dataset management request
+	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.isDsmDma = 1;
+
+
+	if (!smalloc_curr_pool.pool) {
+		size_t size = (size_t)allocator_end_addr - (size_t)allocator_start_addr;
+		sm_set_default_pool((void*)allocator_start_addr, size, 0, 0);
+	}
+
+    unsigned int devAddr = (unsigned int)sm_malloc(BYTES_PER_NVME_BLOCK);
+
+	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr = devAddr;
+
+    set_direct_rx_dma(devAddr, dsmAddrH, dsmAddrL, BYTES_PER_NVME_BLOCK);
+
+    reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail =
+        g_hostDmaStatus.fifoTail.directDmaRx;
+    // reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt =
+    //     g_hostDmaAssistStatus.autoDmaRxOverFlowCnt;
+
+    PutToNvmeDmaReqQ(reqSlotTag);
+}
 
 void EvictDataBufEntry(unsigned int originReqSlotTag)
 {
@@ -629,8 +670,13 @@ void CheckDoneNvmeDmaReq()
 			if(!rxDone)
 				rxDone = check_auto_rx_dma_partial_done(reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail , reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt);
 
-			if(rxDone)
+			if(rxDone) {
+				if (reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.isDsmDma) {
+					xil_printf("DMA done was DSM, devAddr=%p\n", reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr);
+					sm_free((void*)reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr);
+				}
 				SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
+			}
 		}
 		else
 		{
