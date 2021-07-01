@@ -131,6 +131,28 @@ void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	ReqTransNvmeToSlice(cmdSlotTag, startLba[0], nlb, IO_NVM_WRITE);
 }
 
+void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
+{
+	IO_DATASET_MANAGEMENT_COMMAND_DW10 dsmInfo10;
+	IO_DATASET_MANAGEMENT_COMMAND_DW11 dsmInfo11;
+
+	dsmInfo10.dword = nvmeIOCmd->dword[10];
+	dsmInfo11.dword = nvmeIOCmd->dword[11];
+
+//	unsigned long long dsmAddr;
+//	dsmAddr += ((unsigned long long)nvmeIOCmd->PRP1[1]) << 32;
+//	dsmAddr += nvmeIOCmd->PRP1[0];
+	xil_printf("dsm addr: %x:%x\n", nvmeIOCmd->PRP1[1], nvmeIOCmd->PRP1[0]);
+	xil_printf("dsm data_len: %x\n", nvmeIOCmd->PRP2[1]);
+	
+
+	xil_printf("dsm 10: %x\n", dsmInfo10);
+	xil_printf("dsm 11: %x\n", dsmInfo11);
+
+	ReqHandleDatasetManagement(cmdSlotTag, dsmInfo10.NR, nvmeIOCmd->PRP1[1],nvmeIOCmd->PRP1[0],
+								nvmeIOCmd->PRP2[1], dsmInfo11.AD);
+}
+
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 {
 	NVME_IO_COMMAND *nvmeIOCmd;
@@ -160,6 +182,15 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 		{
 			//xil_printf("IO Read Command\r\n");
 			handle_nvme_io_read(nvmeCmd->cmdSlotTag, nvmeIOCmd);
+			break;
+		}
+		case IO_NVM_DATASET_MANAGEMENT:
+		{
+			xil_printf("IO Dsm Command\r\n");
+			handle_nvme_io_dataset_management(nvmeCmd->cmdSlotTag, nvmeIOCmd);
+			nvmeCPL.dword[0] = 0;
+			nvmeCPL.specific = 0x0;
+			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
 			break;
 		}
 		default:

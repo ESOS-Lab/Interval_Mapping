@@ -751,17 +751,28 @@ typedef struct _IO_READ_COMMAND_DW15
 /* IO Dataset Management Command */
 typedef struct _IO_DATASET_MANAGEMENT_COMMAND_DW10
 {
-	unsigned int NR							:8;
-	unsigned int reserved0					:24;
-} _IO_DATASET_MANAGEMENT_COMMAND_DW10;
+    union {
+        unsigned int dword;
+        struct {
+            unsigned int NR : 8;
+            unsigned int reserved0 : 24;
+        };
+    };
+
+} IO_DATASET_MANAGEMENT_COMMAND_DW10;
 
 typedef struct _IO_DATASET_MANAGEMENT_COMMAND_DW11
 {
-	unsigned int IDR						:1;
-	unsigned int IDW						:1;
-	unsigned int AD							:1;
-	unsigned int reserved0					:29;
-} _IO_DATASET_MANAGEMENT_COMMAND_DW11;
+    union {
+        unsigned int dword;
+        struct {
+            unsigned int IDR : 1;
+            unsigned int IDW : 1;
+            unsigned int AD : 1;
+            unsigned int reserved0 : 29;
+        };
+    };
+} IO_DATASET_MANAGEMENT_COMMAND_DW11;
 
 typedef struct _DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES
 {

@@ -64,6 +64,8 @@
 #define ROW_ADDR_DEPENDENCY_TABLE_UPDATE_REPORT_DONE	0
 #define ROW_ADDR_DEPENDENCY_TABLE_UPDATE_REPORT_SYNC	1
 
+extern const void* allocator_start_addr;
+extern const void* allocator_end_addr;
 
 typedef struct _ROW_ADDR_DEPENDENCY_ENTRY {
 	unsigned int permittedProgPage : 12;
@@ -78,6 +80,9 @@ typedef struct _ROW_ADDR_DEPENDENCY_TABLE {
 
 void InitDependencyTable();
 void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigned int nlb, unsigned int cmdCode);
+void ReqHandleDatasetManagement(unsigned int cmdSlotTag, unsigned int numRanges,
+                                unsigned int dsmAddrH, unsigned int dsmAddrL,
+                                unsigned int dataLen, int isDeallocate);
 void ReqTransSliceToLowLevel();
 void IssueNvmeDmaReq(unsigned int reqSlotTag);
 void CheckDoneNvmeDmaReq();
