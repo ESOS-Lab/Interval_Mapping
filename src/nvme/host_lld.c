@@ -361,6 +361,7 @@ void set_direct_rx_dma(unsigned int devAddr, unsigned int pcieAddrH, unsigned in
 	g_hostDmaStatus.fifoTail.directDmaRx++;
 	g_hostDmaStatus.directDmaRxCnt++;
 
+	xil_printf("fifoHead: %d, fifoTail: %d\n", g_hostDmaStatus.fifoHead.directDmaRx, g_hostDmaStatus.fifoTail.directDmaRx);
 }
 
 void set_auto_tx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigned int devAddr, unsigned int autoCompletion)
@@ -532,13 +533,56 @@ unsigned int check_auto_rx_dma_partial_done(unsigned int tailIndex, unsigned int
 	{
 		if(g_hostDmaStatus.fifoTail.autoDmaRx < tailIndex)
 			return 1;
-		else
+		else	
 		{
 			if(g_hostDmaStatus.fifoTail.autoDmaRx > g_hostDmaStatus.fifoHead.autoDmaRx)
 				return 1;
 			else
 				if(g_hostDmaAssistStatus.autoDmaRxOverFlowCnt != tailAssistIndex)
 					return 1;
+		}
+	}
+
+	return 0;
+}
+
+unsigned int check_direct_rx_dma_partial_done(unsigned int tailIndex)
+{
+	//xil_printf("check_auto_rx_dma_partial_done \r\n");
+
+	g_hostDmaStatus.fifoHead.dword = IO_READ32(HOST_DMA_FIFO_CNT_REG_ADDR);
+
+	if(g_hostDmaStatus.fifoHead.directDmaRx == g_hostDmaStatus.fifoTail.directDmaRx)
+		return 1;
+
+	if(g_hostDmaStatus.fifoHead.directDmaRx < tailIndex)
+	{
+		if(g_hostDmaStatus.fifoTail.directDmaRx < tailIndex)
+		{
+			if(g_hostDmaStatus.fifoTail.directDmaRx > g_hostDmaStatus.fifoHead.directDmaRx)
+				return 1;
+			// else
+			// 	if(g_hostDmaAssistStatus.autoDmaRxOverFlowCnt != (tailAssistIndex + 1))
+			// 		return 1;
+		}
+		// else
+		// 	if(g_hostDmaAssistStatus.autoDmaRxOverFlowCnt != tailAssistIndex)
+		// 		return 1;
+
+	}
+	else if(g_hostDmaStatus.fifoHead.directDmaRx == tailIndex)
+		return 1;
+	else
+	{
+		if(g_hostDmaStatus.fifoTail.directDmaRx < tailIndex)
+			return 1;
+		else	
+		{
+			if(g_hostDmaStatus.fifoTail.directDmaRx > g_hostDmaStatus.fifoHead.directDmaRx)
+				return 1;
+			// else
+			// 	if(g_hostDmaAssistStatus.autoDmaRxOverFlowCnt != tailAssistIndex)
+			// 		return 1;
 		}
 	}
 

@@ -367,6 +367,8 @@ unsigned int check_auto_tx_dma_partial_done(unsigned int tailIndex, unsigned int
 
 unsigned int check_auto_rx_dma_partial_done(unsigned int tailIndex, unsigned int tailAssistIndex);
 
+unsigned int check_direct_rx_dma_partial_done(unsigned int tailIndex);
+
 extern HOST_DMA_STATUS g_hostDmaStatus;
 extern HOST_DMA_ASSIST_STATUS g_hostDmaAssistStatus;
 
