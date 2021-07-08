@@ -135,18 +135,32 @@ void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND 
 {
 	IO_DATASET_MANAGEMENT_COMMAND_DW10 dsmInfo10;
 	IO_DATASET_MANAGEMENT_COMMAND_DW11 dsmInfo11;
+	
+	char dmaGet[BYTES_PER_NVME_BLOCK];
+	NVME_COMPLETION nvmeCPL;
 
 	dsmInfo10.dword = nvmeIOCmd->dword[10];
 	dsmInfo11.dword = nvmeIOCmd->dword[11];
 
-	xil_printf("dsm addr: %x:%x\n", nvmeIOCmd->PRP1[1], nvmeIOCmd->PRP1[0]);
-	xil_printf("dsm data_len: %x\n", nvmeIOCmd->PRP2[1]);
-	
+	for (int i = 0; i < 16; i++) {
+		xil_printf("dsm %d: %x\n", i, nvmeIOCmd->dword[i]);
+	}
 
-	xil_printf("dsm 10: %x\n", dsmInfo10);
-	xil_printf("dsm 11: %x\n", dsmInfo11);
+	unsigned int rangeSize = (dsmInfo10.NR + 1) * sizeof(DATASET_MANAGEMENT_RANGE);
+    set_direct_rx_dma((unsigned int)dmaGet, nvmeIOCmd->PRP1[1],nvmeIOCmd->PRP1[0], rangeSize);
+	check_direct_rx_dma_done();
 
-	ReqHandleDatasetManagement(cmdSlotTag, dsmInfo10.NR, nvmeIOCmd->PRP1[1],nvmeIOCmd->PRP1[0], dsmInfo11.AD);
+	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)dmaGet;
+		
+	xil_printf("DMA done was DSM, devAddr=%p, rangeSize=%dB\n", dmaGet, rangeSize);
+	for (int i = 0; i < dsmInfo10.NR + 1; i++, dsmRange++) {
+		xil_printf("dsm lba=%x:%x\n", dsmRange->startingLBA[1], dsmRange->startingLBA[0]);
+	}
+
+	nvmeCPL.dword[0] = 0;
+	nvmeCPL.specific = 0x0;
+	set_auto_nvme_cpl(cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+	// ReqHandleDatasetManagement(cmdSlotTag, dsmInfo10.NR, nvmeIOCmd->PRP1[1],nvmeIOCmd->PRP1[0], dsmInfo11.AD);
 }
 
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)

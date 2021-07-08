@@ -168,6 +168,8 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 unsigned int dsmAddrL,
                                 int isDeallocate) {
     unsigned int reqSlotTag;
+	NVME_COMPLETION nvmeCPL;
+	char dmaGet[BYTES_PER_NVME_BLOCK];
 
     reqSlotTag = GetFromFreeReqQ();
 
@@ -191,18 +193,23 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 	}
 
 	unsigned int rangeSize = (numRanges + 1) * sizeof(DATASET_MANAGEMENT_RANGE);
-    unsigned int devAddr = (unsigned int)sm_malloc(rangeSize);
+    // unsigned int devAddr = (unsigned int)sm_malloc(rangeSize);
+	unsigned int devAddr = (unsigned int)dmaGet;
 
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr = devAddr;
 
     set_direct_rx_dma(devAddr, dsmAddrH, dsmAddrL, rangeSize);
+	check_direct_rx_dma_done();
 
-    reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail =
-        g_hostDmaStatus.fifoTail.directDmaRx;
-    // reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt =
-    //     g_hostDmaAssistStatus.autoDmaRxOverFlowCnt;
-
-    PutToNvmeDmaReqQ(reqSlotTag);
+	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr;
+		
+	xil_printf("DMA done was DSM, devAddr=%p, rangeSize=%dB\n", reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr, rangeSize);
+	for (int i = 0; i < reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.dsmCount; i++, dsmRange++) {
+		xil_printf("dsm lba=%x:%x\n", dsmRange->startingLBA[1], dsmRange->startingLBA[0]);
+	}
+	nvmeCPL.dword[0] = 0;
+	nvmeCPL.specific = 0x0;
+	set_auto_nvme_cpl(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
 }
 
 void EvictDataBufEntry(unsigned int originReqSlotTag)
@@ -678,22 +685,22 @@ void CheckDoneNvmeDmaReq()
 
 //					rxDone = check_direct_rx_dma_partial_done(reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail);
 				// if (!rxDone)
-				check_direct_rx_dma_done();
+			// 	check_direct_rx_dma_done();
 
-				// if(rxDone) {
-					DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr;
+			// 	// if(rxDone) {
+			// 		DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr;
 						
-					xil_printf("DMA done was DSM, devAddr=%p\n", reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr);
-					for (int i = 0; i < reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.dsmCount; i++, dsmRange++) {
-						xil_printf("dsm lba=%x:%x\n", dsmRange->startingLBA[1], dsmRange->startingLBA[0]);
-					}
-					nvmeCPL.dword[0] = 0;
-					nvmeCPL.specific = 0x0;
-					set_auto_nvme_cpl(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
-					// sm_free((void*)reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr);
-					SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
-				// }
-			}
+			// 		xil_printf("DMA done was DSM, devAddr=%p\n", reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr);
+			// 		for (int i = 0; i < reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.dsmCount; i++, dsmRange++) {
+			// 			xil_printf("dsm lba=%x:%x\n", dsmRange->startingLBA[1], dsmRange->startingLBA[0]);
+			// 		}
+			// 		nvmeCPL.dword[0] = 0;
+			// 		nvmeCPL.specific = 0x0;
+			// 		set_auto_nvme_cpl(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+			// 		// sm_free((void*)reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.devAddr);
+			// 		SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
+			// 	// }
+			 }
 			else {
 				if(!rxDone)
 					rxDone = check_auto_rx_dma_partial_done(reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail , reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt);
