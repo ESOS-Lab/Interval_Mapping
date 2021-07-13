@@ -48,8 +48,8 @@
 #include <assert.h>
 #include "memory_map.h"
 #include "xil_printf.h"
-#include "mapping/ftable_hotmap_mapping.h"
 #include "smalloc/smalloc.h"
+#include "mapping/ftable/ftable.h"
 
 //P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
@@ -62,7 +62,6 @@ const void* allocator_end_addr = (const void*) (DRAM_END_ADDR);
 void* memAddr = (void*) allocator_start_addr;
 // alex::Alex<unsigned int, unsigned int> logicalSlice;
 // alex::Alex<unsigned int, unsigned int> virtualSlice;
-
 
 unsigned char sliceAllocationTargetDie;
 unsigned int mbPerbadBlockSpace;
@@ -93,6 +92,8 @@ void InitAddressMap() {
 	InitBlockDieMap();
 
 	xil_printf("init with %p\n", allocator_start_addr);
+
+	wchunk_init(&ccache);
 }
 
 void InitSliceMap() {
@@ -685,13 +686,16 @@ void InitBlockDieMap() {
 
 unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
-	alex::Alex<unsigned int, unsigned int>::Iterator it;
+//	alex::Alex<unsigned int, unsigned int>::Iterator it;
 
 	if (logicalSliceAddr < SLICES_PER_SSD) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
-		return fhm_get(logicalSliceAddr);
+		unsigned int virtualAddr = wchunk_get(&ccache, logicalSliceAddr);
+		xil_printf("trans read l=%d, v=%d\n", logicalSliceAddr, virtualAddr);
+		return virtualAddr;
+//		return fhm_get(logicalSliceAddr);
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 		if (virtualSliceAddr != VSA_NONE)
@@ -711,7 +715,9 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 
 		virtualSliceAddr = FindFreeVirtualSlice();
 
-		fhm_insert(logicalSliceAddr, virtualSliceAddr);
+		xil_printf("trans write l=%d, v=%d\n", logicalSliceAddr, virtualSliceAddr);
+		wchunk_set(&ccache, logicalSliceAddr, virtualSliceAddr);
+//		fhm_insert(logicalSliceAddr, virtualSliceAddr);
 //		logicalSlice.insert(logicalSliceAddr, virtualSliceAddr);
 
 		// virtualSlice.insert(virtualSliceAddr, logicalSliceAddr);
@@ -817,7 +823,8 @@ unsigned int FindDieForFreeSliceAllocation() {
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
 
-	virtualSliceAddr = fhm_get(logicalSliceAddr);
+	virtualSliceAddr = wchunk_get(&ccache, logicalSliceAddr);
+//	virtualSliceAddr = fhm_get(logicalSliceAddr);
 //	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //	virtualSliceAddr =
 //			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
@@ -834,7 +841,8 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		// unlink
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
-		fhm_remove(logicalSliceAddr);
+		wchunk_remove(&ccache, logicalSliceAddr);
+//		fhm_remove(logicalSliceAddr);
 //		logicalSlice.erase(logicalSliceAddr);
 //		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
 //		VSA_NONE;

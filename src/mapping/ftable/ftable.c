@@ -11,223 +11,159 @@
 
 #include "../../ftl_config.h"
 #include "../../memory_map.h"
-#include "../ftable_hotmap_mapping.h"
 #include "xil_printf.h"
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
-// FTable ftables[FTABLE_TABLE_NUM];
-// int curMaxFTableIdx = -1;
+WChunkCache ccache;
 
-int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr);
-void ftable_slide(FTable *ftable,
-                  void (*migrationHandler)(unsigned int, unsigned int));
-unsigned int ftable_get_next_slide_head_addr(FTable *ftable);
+int wchunk_get_lru_slot(WChunkCache *ccache);
+void wchunk_mark_mru(WChunkCache *ccache, int slot);
+int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
+                        int isAllocate);
+WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr);
 
-FTable *ftable_create_table(unsigned int focusingHeadAddr, FTable ftables[],
-                            int *curMaxFTableIdx, int maxFTableIndex) {
-    *curMaxFTableIdx = *curMaxFTableIdx + 1;
-    if (*curMaxFTableIdx >= maxFTableIndex) {
-        assert(!"Cannot create more tables. Please increase maxFTableIndex.");
-    }
-
-    ftables[*curMaxFTableIdx].capacity = FTABLE_DEFAULT_CAPACITY;
-    ftables[*curMaxFTableIdx].initialHeadAddr = focusingHeadAddr;
-
-    ftables[*curMaxFTableIdx].headIndex = 0;
-    ftables[*curMaxFTableIdx].filledBeforeNextSlideHead = 0;
-    ftables[*curMaxFTableIdx].filledAfterNextSlideHead = 0;
-    ftables[*curMaxFTableIdx].invalidatedBeforeNextSlideHead = 0;
-    ftables[*curMaxFTableIdx].invalidatedAfterNextSlideHead = 0;
-
-    ftables[*curMaxFTableIdx].afterSlideRatio =
-        FTABLE_DEFAULT_AFTER_SLIDE_RATIO;
-    ftables[*curMaxFTableIdx].invalidatedSlideThresholdRatio =
-        FTABLE_DEFAULT_INVALIDATED_SLIDE_THR_RATIO;
-    ftables[*curMaxFTableIdx].focusingHeadAddr = focusingHeadAddr;
-
-    ftables[*curMaxFTableIdx].entries = (LOGICAL_SLICE_ENTRY *)ftableMemPool;
-    ftableMemPool +=
-        ftables[*curMaxFTableIdx].capacity * sizeof(LOGICAL_SLICE_ENTRY);
-
-    int i;
-    for (i = 0; i < ftables[*curMaxFTableIdx].capacity; i++) {
-        ftables[*curMaxFTableIdx].entries[i].virtualSliceAddr = VSA_NONE;
-    }
-
-    xil_printf("ftable created for %p, ftableMemPool is now %p\n",
-               ftables[*curMaxFTableIdx].entries, ftableMemPool);
-
-    return &ftables[*curMaxFTableIdx];
+void wchunk_init(WChunkCache *ccache) {
+    ccache->curItemCount = 0;
+    ccache->maxLruValue = 0;
 }
 
-int ftable_insert(FTable *ftable, unsigned int logicalSliceAddr,
-                  unsigned int virtualSliceAddr,
-                  void (*migrationHandler)(unsigned int, unsigned int)) {
-    unsigned int index = ftable_addr_to_raw_index(ftable, logicalSliceAddr);
-    if (index < 0) assert(!"index is not valid for FTable");
-    // if entry is newly written, increment filled count
-    if (ftable->entries[index].virtualSliceAddr == VSA_NONE) {
-        unsigned int nextSlideHeadAddr =
-            ftable_get_next_slide_head_addr(ftable);
-        if (logicalSliceAddr < nextSlideHeadAddr)
-            ftable->filledBeforeNextSlideHead++;
-        else
-            ftable->filledAfterNextSlideHead;
+int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
+                        int isAllocate) {
+    int selectedSlot;
+    WChunk_p selectedChunk = NULL;
+
+    unsigned int matchingChunkStartAddr =
+        logicalSliceAddr & WCHUNK_CHUNK_SIZE_MASK;
+
+    // select chunk
+    for (int i = 0; i < ccache->curItemCount; i++) {
+        unsigned int chunkStartAddr = ccache->wchunkStartAddr[i];
+        // check if hit
+        if (chunkStartAddr == matchingChunkStartAddr) {
+            selectedChunk = ccache->wchunk_p[i];
+            selectedSlot = i;
+            break;
+        }
     }
 
-    ftable->entries[index].virtualSliceAddr = virtualSliceAddr;
+    // if not found
+    if (!selectedChunk) {
+        // evict lru one
+        int slot;
+        if (ccache->curItemCount < WCHUNK_CACHE_SIZE)
+            slot = ccache->curItemCount++;
+        else {
+            slot = wchunk_get_lru_slot(ccache);
+        }
 
-    // if (FTABLE_DEBUG)
-    //     xil_printf("ftable insert logical=%p, virtual=%p, insertedTo=%d\n",
-    //                logicalSliceAddr, virtualSliceAddr, index);
+        if (slot < 0) assert(!"slot not exist!");
 
-    // if table is almost filled, slide
-    // this assumes that sliceAddrs are accessed linearly
-    if (logicalSliceAddr >=
-        ftable->focusingHeadAddr +
-            (ftable->capacity) * FTABLE_DEFAULT_INSERT_SLIDE_THRE_RATIO) {
-        ftable_slide(ftable, migrationHandler);
+        // find from tree
+        alex::Alex<unsigned int, WChunk_p>::Iterator it;
+        it = ccache->wchunktree.find(matchingChunkStartAddr);
+        if (it.cur_leaf_ == nullptr) {
+            if (!isAllocate) return -1;
+
+            // allocate new chunk
+            selectedChunk = wchunk_allocate_new(ccache, matchingChunkStartAddr);
+            // ccache->isNewlyAllocated[slot] = 1;
+        } else {
+            selectedChunk = it.payload();
+            // ccache->isNewlyAllocated[slot] = 0;
+        }
+
+        ccache->wchunkStartAddr[slot] = matchingChunkStartAddr;
+        ccache->wchunk_p[slot] = selectedChunk;
+
+        selectedSlot = slot;
     }
+
+    // mark as most recently used one
+    wchunk_mark_mru(ccache, selectedSlot);
+
+    return selectedSlot;
 }
 
-int ftable_get(FTable *ftable, unsigned int sliceAddr) {
-    // if (FTABLE_DEBUG) xil_printf("ftable get logical=%p\n", sliceAddr);
-    unsigned int index = ftable_addr_to_raw_index(ftable, sliceAddr);
-    if (index < 0) assert(!"index is not valid for FTable");
-    return ftable->entries[index].virtualSliceAddr;
+unsigned int wchunk_get(WChunkCache *ccache, unsigned int logicalSliceAddr) {
+    unsigned int virtualSliceAddr, selectedChunkStartAddr;
+
+    int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 0);
+    if (selectedSlot < 0) {
+        return VSA_FAIL;
+    }
+    WChunk_p selectedChunk = ccache->wchunk_p[selectedSlot];
+    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+
+    virtualSliceAddr =
+        selectedChunk->entries[logicalSliceAddr - selectedChunkStartAddr]
+            .virtualSliceAddr;
+
+    // return virtual slice addr
+    return virtualSliceAddr;
 }
 
-void ftable_update(FTable *ftable, unsigned int logicalSliceAddr,
-                   unsigned int virtualSliceAddr) {
-    unsigned int index = ftable_addr_to_raw_index(ftable, logicalSliceAddr);
-    if (index < 0) assert(!"index is not valid for FTable");
-    if (ftable->entries[index].virtualSliceAddr != VSA_NONE) {
-        ftable->entries[index].virtualSliceAddr = virtualSliceAddr;
-    } else {
-        assert(!"trying to update not assigned entry");
+int wchunk_set(WChunkCache *ccache, unsigned int logicalSliceAddr,
+               unsigned int virtualSliceAddr) {
+    unsigned int selectedChunkStartAddr;
+
+    int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
+    if (selectedSlot < 0) {
+        return -1;
     }
-}
+    WChunk_p selectedChunk = ccache->wchunk_p[selectedSlot];
+    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
 
-int ftable_invalidate(FTable *ftable, unsigned int sliceAddr,
-                      void (*migrationHandler)(unsigned int, unsigned int)) {
-    // if (FTABLE_DEBUG) xil_printf("ftable invalidate logical=%p\n",
-    // sliceAddr);
-    unsigned int index = ftable_addr_to_raw_index(ftable, sliceAddr);
-    if (index < 0) assert(!"index is not valid for FTable");
+    selectedChunk->entries[logicalSliceAddr - selectedChunkStartAddr]
+        .virtualSliceAddr = virtualSliceAddr;
 
-    if (ftable->entries[index].virtualSliceAddr != VSA_NONE) {
-        unsigned int nextSlideHeadAddr =
-            ftable_get_next_slide_head_addr(ftable);
-        if (sliceAddr < nextSlideHeadAddr)
-            ftable->invalidatedBeforeNextSlideHead++;
-        else
-            ftable->invalidatedAfterNextSlideHead++;
-
-        ftable->entries[index].virtualSliceAddr = VSA_NONE;
-    } else
-        assert(!"trying to invalidate unmapped entry");
-
-    // if ratio of the invalidated entries before the next slide head addr
-    // exceeds the threshold, slide FTable.
-    if ((float)ftable->invalidatedBeforeNextSlideHead /
-            (ftable->capacity * (1 - ftable->afterSlideRatio)) >
-        ftable->invalidatedSlideThresholdRatio) {
-        ftable_slide(ftable, migrationHandler);
-    }
     return 0;
 }
 
-// Select a table that contains sliceAddr translation data.
-// If not, create one table and put data in it.
-FTable *ftable_select_table(unsigned int sliceAddr, FTable ftables[],
-                            int curMaxFTableIdx) {
-    int i;
-    for (i = 0; i <= curMaxFTableIdx; i++) {
-        if (ftable_addr_to_raw_index(&ftables[i], sliceAddr) > -1) {
-            return &ftables[i];
+int wchunk_remove(WChunkCache *ccache, unsigned int logicalSliceAddr) {
+    return wchunk_set(ccache, logicalSliceAddr, VSA_NONE);
+}
+
+WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
+    WChunk_p chunkp = (WChunk_p)ftableMemPool;
+    ftableMemPool += sizeof(WChunk);
+
+    ccache->wchunktree.insert(chunkStartAddr, chunkp);
+
+    return chunkp;
+}
+
+int wchunk_get_lru_slot(WChunkCache *ccache) {
+    int minLruVal, minLruSlot;
+
+    // if cache is not full, no eviction
+    if (ccache->curItemCount < WCHUNK_CACHE_SIZE) return -1;
+
+    // set to first item
+    minLruVal = ccache->lruValues[0];
+    minLruSlot = 0;
+
+    // evict from lru and put into WChunkTree and return slot
+    for (int i = 1; i < ccache->curItemCount; i++) {
+        if (minLruVal > ccache->lruValues[i]) {
+            minLruVal = ccache->lruValues[i];
+            minLruSlot = i;
         }
     }
-    return NULL;
+
+    xil_printf("evicting slot=%d, lruValue=%d, startAddr=%d\n", minLruSlot,
+               minLruVal, ccache->wchunkStartAddr[minLruSlot]);
+
+    // ccache->curItemCount--;
+    // ccache->lruValues[minLruSlot] = UINT32_MAX;
+    // ccache->wchunk_p[minLruSlot] = NULL;
+    // ccache->wchunkStartAddr[minLruSlot] = 0;
+
+    return minLruSlot;
 }
 
-// Convert given addr to the index in the FTable.
-int ftable_addr_to_raw_index(FTable *ftable, unsigned int sliceAddr) {
-    unsigned index = ftable->headIndex + (sliceAddr - ftable->focusingHeadAddr);
-
-    if (index > ftable->headIndex + ftable->capacity) {
-        return -1;
-    }
-
-    // if index exceeds the capacity, start from the top.
-    if (index >= ftable->capacity) {
-        return index - ftable->capacity;
-    }
-    return index;
-}
-
-// Slide focusingHead at address which is 'afterSlideRatio' ahead from the max
-// address.
-// Triggered by two condition
-// 1. Table is almost filled.
-// 2. The number of invalidated items exceeds certain threshold.
-void ftable_slide(FTable *ftable,
-                  void (*migrationHandler)(unsigned int, unsigned int)) {
-    unsigned int prevHeadAddr = ftable->focusingHeadAddr;
-    unsigned int prevHeadIndex = ftable->headIndex;
-    unsigned int slidedHeadAddr = ftable_get_next_slide_head_addr(ftable);
-    unsigned int nextHeadIndex =
-        ftable_addr_to_raw_index(ftable, slidedHeadAddr);
-
-    // migrate slided mappings
-    if (migrationHandler != NULL) {
-        float invalidationRatio = ftable->invalidatedBeforeNextSlideHead /
-                                  (ftable->capacity * ftable->afterSlideRatio);
-        xil_printf(
-            "invalidated[before:count=%d,ratio=%d\%/"
-            "after:count=%d]\n",
-            ftable->invalidatedBeforeNextSlideHead,
-            (int)(invalidationRatio * 100),
-            ftable->invalidatedAfterNextSlideHead);
-        unsigned int tempAddr = prevHeadAddr;
-        for (; tempAddr < slidedHeadAddr; tempAddr++) {
-            (*migrationHandler)(tempAddr, ftable_get(ftable, tempAddr));
-        }
-        fhm_print_stats();
-    }
-
-    ftable->focusingHeadAddr = slidedHeadAddr;
-    ftable->headIndex = nextHeadIndex;
-
-    // migrate invalidated count
-    ftable->filledBeforeNextSlideHead = ftable->filledAfterNextSlideHead;
-    ftable->invalidatedBeforeNextSlideHead =
-        ftable->invalidatedAfterNextSlideHead;
-
-    if (FTABLE_DEBUG)
-        xil_printf("ftable slide headAddr=%d->%d, headIndex=%d->%d\n",
-                   prevHeadAddr, slidedHeadAddr, prevHeadIndex, nextHeadIndex);
-
-    // handle evicted entries
-}
-
-unsigned int ftable_get_next_slide_head_addr(FTable *ftable) {
-    return ftable->focusingHeadAddr +
-           ftable->capacity * (1 - ftable->afterSlideRatio);
-}
-
-int ftable_get_entry_state(unsigned int sliceAddr, FTable ftables[],
-                           int tableLength) {
-    int i;
-    for (i = 0; i < tableLength; i++) {
-        if (ftables[i].initialHeadAddr <= sliceAddr &&
-            sliceAddr < ftables[i].focusingHeadAddr) {
-            return FTABLE_ENTRY_SLIDED;
-        } else if (ftables[i].focusingHeadAddr <= sliceAddr &&
-                   sliceAddr <
-                       ftables[i].focusingHeadAddr + ftables[i].capacity) {
-            return FTABLE_ENTRY_ACTIVE;
-        }
-    }
-    return FTABLE_ENTRY_NOT_COVERED;
+// TODO: handle overflow or take looping approach (measure performance)
+void wchunk_mark_mru(WChunkCache *ccache, int slot) {
+    ccache->lruValues[slot] = ccache->maxLruValue;
+    ccache->maxLruValue++;
 }
