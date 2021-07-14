@@ -8,7 +8,6 @@
 #include <assert.h>
 
 #include "ftable/ftable.h"
-#include "hotmap/hotmap_alex.h"
 
 // alex::Alex<unsigned int, unsigned int> testHotmap;
 int testCurMaxFtableIdx = -1;
@@ -29,13 +28,13 @@ void test_hotmap() {}
 void test_ftable() {
     xil_printf("Starting ftable test...\n");
 
-    WChunkCache ccache;
-    wchunk_init(&ccache);
-    for(int i = 0; i< 30*FTABLE_DEFAULT_CHUNK_SIZE; i++){
-        int isSetSuccess = wchunk_set(&ccache, i, i+1);
-        unsigned int out = wchunk_get(&ccache, i);
-//        xil_printf("set success is %d, out is %d\n",isSetSuccess, out);
-    }
+//    WChunkCache ccache;
+//    wchunk_init(&ccache);
+//    for(int i = 0; i< 30*FTABLE_DEFAULT_CHUNK_SIZE; i++){
+//        int isSetSuccess = wchunk_set(&ccache, i, i+1);
+//        unsigned int out = wchunk_get(&ccache, i);
+////        xil_printf("set success is %d, out is %d\n",isSetSuccess, out);
+//    }
 
 //    FTable* ftable = ftable_create_table(
 //        0, testHotFTables, &testCurMaxFtableIdx, FTABLE_DEFAULT_TABLE_NUM);

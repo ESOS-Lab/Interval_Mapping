@@ -8,14 +8,18 @@
 #include "ftable.h"
 
 #include <assert.h>
+#include <string.h>
 
+#include "../../alex/openssd_allocator.h"
 #include "../../ftl_config.h"
 #include "../../memory_map.h"
 #include "xil_printf.h"
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
-WChunkCache ccache;
+WChunkCache *ccache;
+WChunkTree wchunktree;
+OpenSSDAllocator<WChunk> allocator = OpenSSDAllocator<WChunk>();
 
 int wchunk_get_lru_slot(WChunkCache *ccache);
 void wchunk_mark_mru(WChunkCache *ccache, int slot);
@@ -23,7 +27,9 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate);
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr);
 
-void wchunk_init(WChunkCache *ccache) {
+void wchunk_init() {
+    OpenSSDAllocator<WChunkCache> aa;
+    ccache = (WChunkCache *)aa.allocate(1);
     ccache->curItemCount = 0;
     ccache->maxLruValue = 0;
 }
@@ -51,6 +57,12 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     if (!selectedChunk) {
         // evict lru one
         int slot;
+
+        // bypass find
+        // because alex loops when no element is inserted
+        int bypassAlexFind = 0;
+        if (ccache->curItemCount == 0) bypassAlexFind = 1;
+
         if (ccache->curItemCount < WCHUNK_CACHE_SIZE)
             slot = ccache->curItemCount++;
         else {
@@ -61,8 +73,9 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
 
         // find from tree
         alex::Alex<unsigned int, WChunk_p>::Iterator it;
-        it = ccache->wchunktree.find(matchingChunkStartAddr);
-        if (it.cur_leaf_ == nullptr) {
+        if (!bypassAlexFind) it = wchunktree.find(matchingChunkStartAddr);
+        // xil_printf("here3\n");
+        if (bypassAlexFind || it.cur_leaf_ == nullptr) {
             if (!isAllocate) return -1;
 
             // allocate new chunk
@@ -88,6 +101,12 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
 unsigned int wchunk_get(WChunkCache *ccache, unsigned int logicalSliceAddr) {
     unsigned int virtualSliceAddr, selectedChunkStartAddr;
 
+    // directly return VSA_NONE on item count is zero
+    // because alex loops when no element is inserted
+    if (ccache->curItemCount == 0) {
+        return VSA_NONE;
+    }
+
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 0);
     if (selectedSlot < 0) {
         return VSA_FAIL;
@@ -99,7 +118,6 @@ unsigned int wchunk_get(WChunkCache *ccache, unsigned int logicalSliceAddr) {
         selectedChunk->entries[logicalSliceAddr - selectedChunkStartAddr]
             .virtualSliceAddr;
 
-    // return virtual slice addr
     return virtualSliceAddr;
 }
 
@@ -125,10 +143,18 @@ int wchunk_remove(WChunkCache *ccache, unsigned int logicalSliceAddr) {
 }
 
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
-    WChunk_p chunkp = (WChunk_p)ftableMemPool;
-    ftableMemPool += sizeof(WChunk);
+    // WChunk_p chunkp = (WChunk_p)ftableMemPool;
+    WChunk_p chunkp = (WChunk_p)allocator.allocate(1);
+    // ftableMemPool += sizeof(WChunk);
 
-    ccache->wchunktree.insert(chunkStartAddr, chunkp);
+    memset(chunkp, VSA_NONE, sizeof(WChunk));
+
+    for (int i = 0; i < FTABLE_DEFAULT_CHUNK_SIZE; i++) {
+        if (chunkp->entries[i].virtualSliceAddr != VSA_NONE)
+            xil_printf("wchunk allocate error %d\n", i);
+    }
+
+    wchunktree.insert(chunkStartAddr, chunkp);
 
     return chunkp;
 }
@@ -150,14 +176,6 @@ int wchunk_get_lru_slot(WChunkCache *ccache) {
             minLruSlot = i;
         }
     }
-
-    xil_printf("evicting slot=%d, lruValue=%d, startAddr=%d\n", minLruSlot,
-               minLruVal, ccache->wchunkStartAddr[minLruSlot]);
-
-    // ccache->curItemCount--;
-    // ccache->lruValues[minLruSlot] = UINT32_MAX;
-    // ccache->wchunk_p[minLruSlot] = NULL;
-    // ccache->wchunkStartAddr[minLruSlot] = 0;
 
     return minLruSlot;
 }

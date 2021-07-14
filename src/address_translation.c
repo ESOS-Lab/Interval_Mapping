@@ -90,10 +90,10 @@ void InitAddressMap() {
 
 	InitSliceMap();
 	InitBlockDieMap();
+	wchunk_init();
 
-	xil_printf("init with %p\n", allocator_start_addr);
+	xil_printf("init with %p, ccache=%p\n", allocator_start_addr, ccache);
 
-	wchunk_init(&ccache);
 }
 
 void InitSliceMap() {
@@ -692,10 +692,7 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
-		unsigned int virtualAddr = wchunk_get(&ccache, logicalSliceAddr);
-		xil_printf("trans read l=%d, v=%d\n", logicalSliceAddr, virtualAddr);
-		return virtualAddr;
-//		return fhm_get(logicalSliceAddr);
+		return wchunk_get(ccache, logicalSliceAddr);
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 		if (virtualSliceAddr != VSA_NONE)
@@ -715,9 +712,7 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 
 		virtualSliceAddr = FindFreeVirtualSlice();
 
-		xil_printf("trans write l=%d, v=%d\n", logicalSliceAddr, virtualSliceAddr);
-		wchunk_set(&ccache, logicalSliceAddr, virtualSliceAddr);
-//		fhm_insert(logicalSliceAddr, virtualSliceAddr);
+		wchunk_set(ccache, logicalSliceAddr, virtualSliceAddr);
 //		logicalSlice.insert(logicalSliceAddr, virtualSliceAddr);
 
 		// virtualSlice.insert(virtualSliceAddr, logicalSliceAddr);
@@ -823,8 +818,7 @@ unsigned int FindDieForFreeSliceAllocation() {
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
 
-	virtualSliceAddr = wchunk_get(&ccache, logicalSliceAddr);
-//	virtualSliceAddr = fhm_get(logicalSliceAddr);
+	virtualSliceAddr = wchunk_get(ccache, logicalSliceAddr);
 //	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //	virtualSliceAddr =
 //			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
@@ -841,8 +835,7 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		// unlink
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
-		wchunk_remove(&ccache, logicalSliceAddr);
-//		fhm_remove(logicalSliceAddr);
+		wchunk_remove(ccache, logicalSliceAddr);
 //		logicalSlice.erase(logicalSliceAddr);
 //		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
 //		VSA_NONE;

@@ -65,7 +65,6 @@ typedef struct wchunk_cache {
     WChunk_p wchunk_p[WCHUNK_CACHE_SIZE];
     unsigned int wchunkStartAddr[WCHUNK_CACHE_SIZE];
     unsigned int lruValues[WCHUNK_CACHE_SIZE];
-    WChunkTree wchunktree;
     int curItemCount;
     int maxLruValue;
     // union {
@@ -74,7 +73,7 @@ typedef struct wchunk_cache {
     // };
 } WChunkCache;
 
-void wchunk_init(WChunkCache *ccache);
+void wchunk_init();
 unsigned int wchunk_get(WChunkCache *ccache, unsigned int logicalSliceAddr);
 int wchunk_set(WChunkCache *ccache, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr);
@@ -95,6 +94,6 @@ int wchunk_remove(WChunkCache *ccache, unsigned int logicalSliceAddr);
 // void ftable_update(FTable *ftable, unsigned int logicalSliceAddr,
 //                    unsigned int virtualSliceAddr);
 
-extern WChunkCache ccache;
+extern WChunkCache *ccache;
 
 #endif /* SRC_MAPPING_FTABLE_FTABLE_H_ */
