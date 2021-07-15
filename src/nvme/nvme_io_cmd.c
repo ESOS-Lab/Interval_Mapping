@@ -142,9 +142,6 @@ void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND 
 	dsmInfo10.dword = nvmeIOCmd->dword[10];
 	dsmInfo11.dword = nvmeIOCmd->dword[11];
 
-	for (int i = 0; i < 16; i++) {
-		xil_printf("dsm %d: %x\n", i, nvmeIOCmd->dword[i]);
-	}
 	ReqHandleDatasetManagement(cmdSlotTag, dsmInfo10.NR, nvmeIOCmd->PRP1[1],nvmeIOCmd->PRP1[0], dsmInfo11.AD);
 }
 
