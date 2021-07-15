@@ -182,10 +182,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 
 	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)devAddr;
 		
-	xil_printf("DMA done was DSM, devAddr=%p, rangeSize=%dB\n", devAddr, rangeSize);
 	for (int i = 0; i < numRanges + 1; i++, dsmRange++) {
-		xil_printf("dsm lba=%x:%x, length=%d\n", dsmRange->startingLBA[1], dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
-		
 		// TODO: convert to 64-bit LBA
 		tempLsa = dsmRange->startingLBA[0] / NVME_BLOCKS_PER_SLICE;
 		dsmOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
@@ -200,9 +197,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 			tempLsa++;
 		}
 	}
-
-	xil_printf("DSM complete\n");
-
+	
     NVME_COMPLETION nvmeCPL;
 	nvmeCPL.dword[0] = 0;
     nvmeCPL.specific = 0x0;
