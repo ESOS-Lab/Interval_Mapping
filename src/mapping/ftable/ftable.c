@@ -32,68 +32,77 @@ void wchunk_init() {
     ccache = (WChunkCache *)aa.allocate(1);
     ccache->curItemCount = 0;
     ccache->maxLruValue = 0;
+    ccache->lastSelectedSlot = -1;
 }
 
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate) {
-    int selectedSlot;
+    int selectedSlot, slot, bypassAlexFind = 0;
     WChunk_p selectedChunk = NULL;
+    alex::Alex<unsigned int, WChunk_p>::Iterator it;
 
     unsigned int matchingChunkStartAddr =
         logicalSliceAddr & WCHUNK_CHUNK_SIZE_MASK;
 
     // select chunk
+    if (ccache->lastSelectedSlot >= 0 &&
+        ccache->wchunkStartAddr[ccache->lastSelectedSlot] ==
+            matchingChunkStartAddr) {
+        selectedSlot = ccache->lastSelectedSlot;
+        selectedChunk = ccache->wchunk_p[ccache->lastSelectedSlot];
+        goto found;
+    }
+
     for (int i = 0; i < ccache->curItemCount; i++) {
         unsigned int chunkStartAddr = ccache->wchunkStartAddr[i];
         // check if hit
         if (chunkStartAddr == matchingChunkStartAddr) {
             selectedChunk = ccache->wchunk_p[i];
             selectedSlot = i;
-            break;
+            goto found;
         }
     }
 
     // if not found
-    if (!selectedChunk) {
-        // evict lru one
-        int slot;
+    // evict lru one
 
-        // bypass find
-        // because alex loops when no element is inserted
-        int bypassAlexFind = 0;
-        if (ccache->curItemCount == 0) bypassAlexFind = 1;
+    // bypass find
+    // because alex loops when no element is inserted
+    if (ccache->curItemCount == 0) bypassAlexFind = 1;
 
-        if (ccache->curItemCount < WCHUNK_CACHE_SIZE)
-            slot = ccache->curItemCount++;
-        else {
-            slot = wchunk_get_lru_slot(ccache);
-        }
-
-        if (slot < 0) assert(!"slot not exist!");
-
-        // find from tree
-        alex::Alex<unsigned int, WChunk_p>::Iterator it;
-        if (!bypassAlexFind) it = wchunktree.find(matchingChunkStartAddr);
-        // xil_printf("here3\n");
-        if (bypassAlexFind || it.cur_leaf_ == nullptr) {
-            if (!isAllocate) return -1;
-
-            // allocate new chunk
-            selectedChunk = wchunk_allocate_new(ccache, matchingChunkStartAddr);
-            // ccache->isNewlyAllocated[slot] = 1;
-        } else {
-            selectedChunk = it.payload();
-            // ccache->isNewlyAllocated[slot] = 0;
-        }
-
-        ccache->wchunkStartAddr[slot] = matchingChunkStartAddr;
-        ccache->wchunk_p[slot] = selectedChunk;
-
-        selectedSlot = slot;
+    if (ccache->curItemCount < WCHUNK_CACHE_SIZE)
+        slot = ccache->curItemCount++;
+    else {
+        slot = wchunk_get_lru_slot(ccache);
     }
 
+    if (slot < 0) assert(!"slot not exist!");
+
+    // find from tree
+    if (!bypassAlexFind) it = wchunktree.find(matchingChunkStartAddr);
+    // xil_printf("here3\n");
+    if (bypassAlexFind || it.cur_leaf_ == nullptr) {
+        if (!isAllocate) return -1;
+
+        // allocate new chunk
+        selectedChunk = wchunk_allocate_new(ccache, matchingChunkStartAddr);
+        // ccache->isNewlyAllocated[slot] = 1;
+    } else {
+        selectedChunk = it.payload();
+        // ccache->isNewlyAllocated[slot] = 0;
+    }
+
+    ccache->wchunkStartAddr[slot] = matchingChunkStartAddr;
+    ccache->wchunk_p[slot] = selectedChunk;
+
+    selectedSlot = slot;
+
+found:
     // mark as most recently used one
     wchunk_mark_mru(ccache, selectedSlot);
+
+    // mark as last selected
+    ccache->lastSelectedSlot = selectedSlot;
 
     return selectedSlot;
 }

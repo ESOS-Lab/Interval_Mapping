@@ -18,7 +18,7 @@
 #define FTABLE_DEFAULT_INSERT_SLIDE_THRE_RATIO 0.95
 #define WCHUNK_DEFAULT_CHUNK_SIZE_DIGIT 10
 #define FTABLE_DEFAULT_CHUNK_SIZE (1 << WCHUNK_DEFAULT_CHUNK_SIZE_DIGIT)
-#define WCHUNK_CACHE_SIZE 10
+#define WCHUNK_CACHE_SIZE 20
 #define WCHUNK_CHUNK_SIZE_MASK (~(FTABLE_DEFAULT_CHUNK_SIZE - 1))
 
 #define FTABLE_ENTRY_NOT_COVERED 0
@@ -67,6 +67,8 @@ typedef struct wchunk_cache {
     unsigned int lruValues[WCHUNK_CACHE_SIZE];
     int curItemCount;
     int maxLruValue;
+
+    int lastSelectedSlot;
     // union {
     //     unsigned long long qword;
     //     char isNewlyAllocated[WCHUNK_CACHE_SIZE];
