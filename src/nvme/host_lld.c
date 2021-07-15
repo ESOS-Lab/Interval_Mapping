@@ -360,8 +360,6 @@ void set_direct_rx_dma(unsigned int devAddr, unsigned int pcieAddrH, unsigned in
 
 	g_hostDmaStatus.fifoTail.directDmaRx++;
 	g_hostDmaStatus.directDmaRxCnt++;
-
-	xil_printf("fifoHead: %d, fifoTail: %d\n", g_hostDmaStatus.fifoHead.directDmaRx, g_hostDmaStatus.fifoTail.directDmaRx);
 }
 
 void set_auto_tx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigned int devAddr, unsigned int autoCompletion)
