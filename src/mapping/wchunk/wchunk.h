@@ -13,6 +13,7 @@
 
 #define WCHUNK_DEFAULT_CHUNK_SIZE_DIGIT 10
 #define WCHUNK_DEFAULT_CHUNK_SIZE (1 << WCHUNK_DEFAULT_CHUNK_SIZE_DIGIT)
+#define WCHUNK_USE_LAST_SLOT 0
 #define WCHUNK_CACHE_SIZE 20
 #define WCHUNK_CHUNK_SIZE_MASK (~(WCHUNK_DEFAULT_CHUNK_SIZE - 1))
 
@@ -59,7 +60,9 @@ typedef struct wchunk_cache {
     int curItemCount;
     int maxLruValue;
 
+#if WCHUNK_USE_LAST_SLOT
     int lastSelectedSlot;
+#endif
     // union {
     //     unsigned long long qword;
     //     char isNewlyAllocated[WCHUNK_CACHE_SIZE];

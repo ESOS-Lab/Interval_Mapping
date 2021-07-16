@@ -32,7 +32,10 @@ void wchunk_init() {
     ccache = (WChunkCache *)aa.allocate(1);
     ccache->curItemCount = 0;
     ccache->maxLruValue = 0;
+
+#if WCHUNK_USE_LAST_SLOT
     ccache->lastSelectedSlot = -1;
+#endif
 }
 
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
@@ -44,6 +47,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     unsigned int matchingChunkStartAddr =
         logicalSliceAddr & WCHUNK_CHUNK_SIZE_MASK;
 
+#if WCHUNK_USE_LAST_SLOT
     // select chunk
     if (ccache->lastSelectedSlot >= 0 &&
         ccache->wchunkStartAddr[ccache->lastSelectedSlot] ==
@@ -52,6 +56,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
         selectedChunk = ccache->wchunk_p[ccache->lastSelectedSlot];
         goto found;
     }
+#endif
 
     for (int i = 0; i < ccache->curItemCount; i++) {
         unsigned int chunkStartAddr = ccache->wchunkStartAddr[i];
@@ -101,8 +106,10 @@ found:
     // mark as most recently used one
     wchunk_mark_mru(ccache, selectedSlot);
 
+#if WCHUNK_USE_LAST_SLOT
     // mark as last selected
     ccache->lastSelectedSlot = selectedSlot;
+#endif
 
     return selectedSlot;
 }
