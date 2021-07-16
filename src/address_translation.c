@@ -49,7 +49,7 @@
 #include "memory_map.h"
 #include "xil_printf.h"
 #include "smalloc/smalloc.h"
-#include "mapping/ftable/ftable.h"
+#include "mapping/wchunk/wchunk.h"
 
 //P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;

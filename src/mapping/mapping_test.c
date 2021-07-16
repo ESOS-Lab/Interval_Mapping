@@ -7,7 +7,7 @@
 
 #include <assert.h>
 
-#include "ftable/ftable.h"
+#include "wchunk/wchunk.h"
 
 // alex::Alex<unsigned int, unsigned int> testHotmap;
 int testCurMaxFtableIdx = -1;
@@ -15,13 +15,6 @@ int testCurMaxFtableIdx = -1;
 
 void test_fhm() {
     xil_printf("Starting fhm test...\n");
-    int i;
-    for (i = 0; i < FTABLE_DEFAULT_CAPACITY * 2; i += 1) {
-//        fhm_insert(i, i + 100);
-    }
-    for (i = 0; i < FTABLE_DEFAULT_CAPACITY * 2; i += 1) {
-//        assert(fhm_get(i) == i + 100);
-    }
     xil_printf("fhm test ok.\n");
 }
 void test_hotmap() {}
