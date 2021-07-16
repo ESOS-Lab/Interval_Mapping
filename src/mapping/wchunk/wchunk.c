@@ -45,7 +45,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     alex::Alex<unsigned int, WChunk_p>::Iterator it;
 
     unsigned int matchingChunkStartAddr =
-        logicalSliceAddr & WCHUNK_CHUNK_SIZE_MASK;
+        logicalSliceAddr & WCHUNK_START_ADDR_MASK;
 
 #if WCHUNK_USE_LAST_SLOT
     // select chunk
