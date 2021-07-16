@@ -11,11 +11,12 @@
 #include "../../address_translation.h"
 #include "../../alex/alex.h"
 
-#define WCHUNK_DEFAULT_CHUNK_SIZE_DIGIT 10
-#define WCHUNK_DEFAULT_CHUNK_SIZE (1 << WCHUNK_DEFAULT_CHUNK_SIZE_DIGIT)
 #define WCHUNK_USE_LAST_SLOT 0
+
+#define WCHUNK_LENGTH_DIGIT 10
+#define WCHUNK_LENGTH (1 << WCHUNK_LENGTH_DIGIT)
 #define WCHUNK_CACHE_SIZE 20
-#define WCHUNK_CHUNK_SIZE_MASK (~(WCHUNK_DEFAULT_CHUNK_SIZE - 1))
+#define WCHUNK_CHUNK_SIZE_MASK (~(WCHUNK_LENGTH - 1))
 
 #define FTABLE_DEBUG 1
 
@@ -45,7 +46,7 @@
 // } FTable;
 
 typedef struct wchunk {
-    LOGICAL_SLICE_ENTRY entries[WCHUNK_DEFAULT_CHUNK_SIZE];
+    LOGICAL_SLICE_ENTRY entries[WCHUNK_LENGTH];
 } WChunk, *WChunk_p;
 
 using WChunkTree = alex::Alex<unsigned int, WChunk_p>;

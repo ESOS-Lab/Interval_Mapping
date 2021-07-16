@@ -165,7 +165,7 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
 
     memset(chunkp, VSA_NONE, sizeof(WChunk));
 
-    for (int i = 0; i < WCHUNK_DEFAULT_CHUNK_SIZE; i++) {
+    for (int i = 0; i < WCHUNK_LENGTH; i++) {
         if (chunkp->entries[i].virtualSliceAddr != VSA_NONE)
             xil_printf("wchunk allocate error %d\n", i);
     }
