@@ -1,7 +1,7 @@
 /*
- * ftable.c
+ * wchunk.c
  *
- *  Created on: 2021. 4. 26.
+ *  Created on: 2021. 7. 16.
  *      Author: Minsu Jang (nobleminsu@gmail.com)
  */
 
