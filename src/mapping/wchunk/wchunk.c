@@ -40,7 +40,7 @@ void wchunk_init() {
 
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate) {
-    int selectedSlot, slot, bypassAlexFind = 0;
+    int selectedSlot, bypassAlexFind = 0;
     WChunk_p selectedChunk = NULL;
     alex::Alex<unsigned int, WChunk_p>::Iterator it;
 
@@ -68,20 +68,9 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
         }
     }
 
-    // if not found
-    // evict lru one
-
     // bypass find
     // because alex loops when no element is inserted
     if (ccache->curItemCount == 0) bypassAlexFind = 1;
-
-    if (ccache->curItemCount < WCHUNK_CACHE_SIZE)
-        slot = ccache->curItemCount++;
-    else {
-        slot = wchunk_get_lru_slot(ccache);
-    }
-
-    if (slot < 0) assert(!"slot not exist!");
 
     // find from tree
     if (!bypassAlexFind) it = wchunktree.find(matchingChunkStartAddr);
@@ -91,16 +80,23 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
 
         // allocate new chunk
         selectedChunk = wchunk_allocate_new(ccache, matchingChunkStartAddr);
-        // ccache->isNewlyAllocated[slot] = 1;
     } else {
         selectedChunk = it.payload();
-        // ccache->isNewlyAllocated[slot] = 0;
     }
 
-    ccache->wchunkStartAddr[slot] = matchingChunkStartAddr;
-    ccache->wchunk_p[slot] = selectedChunk;
+    // if chunk is found, find a slot
+    if (ccache->curItemCount < WCHUNK_CACHE_SIZE) {
+        selectedSlot = ccache->curItemCount;
+        ccache->curItemCount++;
+    } else {
+        selectedSlot = wchunk_get_lru_slot(ccache);
+    }
 
-    selectedSlot = slot;
+    if (selectedSlot < 0) assert(!"slot not exist!");
+
+    // assign to the slot
+    ccache->wchunkStartAddr[selectedSlot] = matchingChunkStartAddr;
+    ccache->wchunk_p[selectedSlot] = selectedChunk;
 
 found:
     // mark as most recently used one
@@ -165,10 +161,10 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
 
     memset(chunkp, VSA_NONE, sizeof(WChunk));
 
-    for (int i = 0; i < WCHUNK_LENGTH; i++) {
-        if (chunkp->entries[i].virtualSliceAddr != VSA_NONE)
-            xil_printf("wchunk allocate error %d\n", i);
-    }
+    // for (int i = 0; i < WCHUNK_LENGTH; i++) {
+    //     if (chunkp->entries[i].virtualSliceAddr != VSA_NONE)
+    //         xil_printf("wchunk allocate error %d\n", i);
+    // }
 
     wchunktree.insert(chunkStartAddr, chunkp);
 

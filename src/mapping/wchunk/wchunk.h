@@ -27,7 +27,7 @@ using WChunkTree = alex::Alex<unsigned int, WChunk_p>;
 typedef struct wchunk_cache {
     WChunk_p wchunk_p[WCHUNK_CACHE_SIZE];
     unsigned int wchunkStartAddr[WCHUNK_CACHE_SIZE];
-    unsigned int lruValues[WCHUNK_CACHE_SIZE];
+    int lruValues[WCHUNK_CACHE_SIZE];
     int curItemCount;
     int maxLruValue;
 
