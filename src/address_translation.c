@@ -92,7 +92,7 @@ void InitAddressMap() {
 	InitBlockDieMap();
 	wchunk_init();
 
-	xil_printf("init with %p, ccache=%p\n", allocator_start_addr, ccache);
+	xil_printf("init with %p, chunkBucket=%p\n", allocator_start_addr, wchunkBucket);
 
 }
 
@@ -692,7 +692,7 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
-		return wchunk_get(ccache, logicalSliceAddr);
+		return wchunk_get(wchunkBucket, logicalSliceAddr);
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 		if (virtualSliceAddr != VSA_NONE)
@@ -712,7 +712,7 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 
 		virtualSliceAddr = FindFreeVirtualSlice();
 
-		wchunk_set(ccache, logicalSliceAddr, virtualSliceAddr);
+		wchunk_set(wchunkBucket, logicalSliceAddr, virtualSliceAddr);
 //		logicalSlice.insert(logicalSliceAddr, virtualSliceAddr);
 
 		// virtualSlice.insert(virtualSliceAddr, logicalSliceAddr);
@@ -818,7 +818,7 @@ unsigned int FindDieForFreeSliceAllocation() {
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
 
-	virtualSliceAddr = wchunk_get(ccache, logicalSliceAddr);
+	virtualSliceAddr = wchunk_get(wchunkBucket, logicalSliceAddr);
 //	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //	virtualSliceAddr =
 //			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
@@ -835,7 +835,7 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		// unlink
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
-		wchunk_remove(ccache, logicalSliceAddr);
+		wchunk_remove(wchunkBucket, logicalSliceAddr);
 //		logicalSlice.erase(logicalSliceAddr);
 //		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
 //		VSA_NONE;

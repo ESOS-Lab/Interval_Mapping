@@ -17,7 +17,8 @@
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
-WChunkCache *ccache;
+// WChunkCache *ccache;
+WChunkBucket *wchunkBucket;
 WChunkTree wchunktree;
 OpenSSDAllocator<WChunk> allocator = OpenSSDAllocator<WChunk>();
 
@@ -28,14 +29,20 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr);
 
 void wchunk_init() {
-    OpenSSDAllocator<WChunkCache> aa;
-    ccache = (WChunkCache *)aa.allocate(1);
-    ccache->curItemCount = 0;
-    ccache->maxLruValue = 0;
+    WChunkCache *ccache;
+
+    OpenSSDAllocator<WChunkBucket> aa;
+    wchunkBucket = (WChunkBucket_p)aa.allocate(1);
+
+    for (int i = 0; i < WCHUNK_BUCKET_SIZE; i++) {
+        ccache = &wchunkBucket->ccaches[i];
+        ccache->curItemCount = 0;
+        ccache->maxLruValue = 0;
 
 #if WCHUNK_USE_LAST_SLOT
-    ccache->lastSelectedSlot = -1;
+        ccache->lastSelectedSlot = -1;
 #endif
+    }
 }
 
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
@@ -110,8 +117,11 @@ found:
     return selectedSlot;
 }
 
-unsigned int wchunk_get(WChunkCache *ccache, unsigned int logicalSliceAddr) {
+unsigned int wchunk_get(WChunkBucket *wchunkBucket,
+                        unsigned int logicalSliceAddr) {
     unsigned int virtualSliceAddr, selectedChunkStartAddr;
+    WChunkCache *ccache =
+        &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
     // directly return VSA_NONE on item count is zero
     // because alex loops when no element is inserted
@@ -133,9 +143,11 @@ unsigned int wchunk_get(WChunkCache *ccache, unsigned int logicalSliceAddr) {
     return virtualSliceAddr;
 }
 
-int wchunk_set(WChunkCache *ccache, unsigned int logicalSliceAddr,
+int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr) {
     unsigned int selectedChunkStartAddr;
+    WChunkCache *ccache =
+        &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
     if (selectedSlot < 0) {
@@ -150,8 +162,8 @@ int wchunk_set(WChunkCache *ccache, unsigned int logicalSliceAddr,
     return 0;
 }
 
-int wchunk_remove(WChunkCache *ccache, unsigned int logicalSliceAddr) {
-    return wchunk_set(ccache, logicalSliceAddr, VSA_NONE);
+int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr) {
+    return wchunk_set(wchunkBucket, logicalSliceAddr, VSA_NONE);
 }
 
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
