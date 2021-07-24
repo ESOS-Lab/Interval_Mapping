@@ -27,6 +27,7 @@ void wchunk_mark_mru(WChunkCache *ccache, int slot);
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate);
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr);
+void wchunk_print_alex_stats();
 
 void wchunk_init() {
     WChunkCache *ccache;
@@ -180,6 +181,8 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
 
     wchunktree.insert(chunkStartAddr, chunkp);
 
+    wchunk_print_alex_stats();
+    
     return chunkp;
 }
 
@@ -208,4 +211,12 @@ int wchunk_get_lru_slot(WChunkCache *ccache) {
 void wchunk_mark_mru(WChunkCache *ccache, int slot) {
     ccache->lruValues[slot] = ccache->maxLruValue;
     ccache->maxLruValue++;
+}
+
+void wchunk_print_alex_stats() {
+    WChunkTree::Stats stats = wchunktree.get_stats();
+    xil_printf(
+        "num_keys=%d, num_model_nodes=%d, num_data_nodes=%d, num_splits=%d\n",
+        stats.num_keys, stats.num_model_nodes, stats.num_data_nodes,
+        stats.num_downward_splits + stats.num_sideways_splits);
 }

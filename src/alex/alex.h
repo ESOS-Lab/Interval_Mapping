@@ -1164,7 +1164,7 @@ public:
 		}
 
 		data_node_type* leaf = get_leaf(key);
-		if (ALEXDEBUG)
+		// if (ALEXDEBUG)
 			xil_printf("insert: leaf filled=%d, capacity=%d\n", leaf->num_keys_, leaf->data_capacity_);
 
 		// Nonzero fail flag means that the insert did not happen
