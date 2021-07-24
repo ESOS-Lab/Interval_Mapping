@@ -53,7 +53,6 @@
 #include "nvme/host_lld.h"
 #include "memory_map.h"
 #include "ftl_config.h"
-#include "smalloc/smalloc.h"
 
 P_ROW_ADDR_DEPENDENCY_TABLE rowAddrDependencyTablePtr;
 
@@ -165,22 +164,14 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 unsigned int dsmAddrL,
                                 int isDeallocate) {
     unsigned int reqSlotTag, tempLsa, dsmOffset;
-	unsigned int rangeSize, devAddr;
-
-	if (!smalloc_curr_pool.pool) {
-		size_t size = (size_t)allocator_end_addr - (size_t)allocator_start_addr;
-		sm_set_default_pool((void*)allocator_start_addr, size, 0, 0);
-	}
+	unsigned int rangeSize;
 
 	rangeSize = (numRanges + 1) * sizeof(DATASET_MANAGEMENT_RANGE);
-	devAddr = (unsigned int) sm_malloc(rangeSize);
 
     set_direct_rx_dma(ADMIN_CMD_DRAM_DATA_BUFFER, dsmAddrH, dsmAddrL, rangeSize);
 	check_direct_rx_dma_done();
 
-	memcpy((void *)devAddr, (void *)ADMIN_CMD_DRAM_DATA_BUFFER, rangeSize);
-
-	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)devAddr;
+	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)ADMIN_CMD_DRAM_DATA_BUFFER;
 		
 	for (int i = 0; i < numRanges + 1; i++, dsmRange++) {
 		// TODO: convert to 64-bit LBA
