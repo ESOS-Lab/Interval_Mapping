@@ -87,6 +87,9 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	tempLsa = startLba / NVME_BLOCKS_PER_SLICE;
 	loop = ((startLba % NVME_BLOCKS_PER_SLICE) + requestedNvmeBlock) / NVME_BLOCKS_PER_SLICE;
 
+	if ((startLba % 1000000) == 0) {
+		xil_printf("LBA received %d\n", startLba);
+	}
 	if(cmdCode == IO_NVM_WRITE)
 		reqCode = REQ_CODE_WRITE;
 	else if(cmdCode == IO_NVM_READ)

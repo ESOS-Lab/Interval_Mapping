@@ -688,7 +688,7 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
 //	alex::Alex<unsigned int, unsigned int>::Iterator it;
 
-	if (logicalSliceAddr < SLICES_PER_SSD) {
+	// if (logicalSliceAddr < SLICES_PER_SSD) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
@@ -699,15 +699,15 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 			return virtualSliceAddr;
 		else
 			return VSA_FAIL;
-	} else
-		assert(
-				!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+	// } else
+	// 	assert(
+	// 			!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
 
-	if (logicalSliceAddr < SLICES_PER_SSD) {
+	// if (logicalSliceAddr < SLICES_PER_SSD) {
 		InvalidateOldVsa(logicalSliceAddr);
 
 		virtualSliceAddr = FindFreeVirtualSlice();
@@ -722,9 +722,9 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 				logicalSliceAddr;
 
 		return virtualSliceAddr;
-	} else
-		assert(
-				!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+	// } else
+	// 	assert(
+	// 			!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
 unsigned int FindFreeVirtualSlice() {

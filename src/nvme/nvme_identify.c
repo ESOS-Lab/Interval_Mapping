@@ -153,11 +153,14 @@ void identify_namespace(unsigned int pBuffer)
 
 	memset(identifyNS, 0, sizeof(ADMIN_IDENTIFY_NAMESPACE));
 
-	identifyNS->NSZE[0] = storageCapacity_L;
+    identifyNS->NSZE[0] = storageCapacity_L_fake;
+	// identifyNS->NSZE[0] = storageCapacity_L;
 	identifyNS->NSZE[1] = STORAGE_CAPACITY_H;
-	identifyNS->NCAP[0] = storageCapacity_L;
+	identifyNS->NCAP[0] = storageCapacity_L_fake;
+	// identifyNS->NCAP[0] = storageCapacity_L;
 	identifyNS->NCAP[1] = STORAGE_CAPACITY_H;
-	identifyNS->NUSE[0] = storageCapacity_L;
+	identifyNS->NUSE[0] = storageCapacity_L_fake;
+	// identifyNS->NUSE[0] = storageCapacity_L;
 	identifyNS->NUSE[1] = STORAGE_CAPACITY_H;
 
 	identifyNS->NSFEAT.supportsThinProvisioning = 0x0;

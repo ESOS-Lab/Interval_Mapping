@@ -183,7 +183,7 @@
 
 //************************************************************************
 #define	BITS_PER_FLASH_CELL		SLC_MODE	//user configurable factor
-#define	USER_BLOCKS_PER_LUN		1024		//user configurable factor
+#define	USER_BLOCKS_PER_LUN		4096		//user configurable factor
 #define	USER_CHANNELS			(NUMBER_OF_CONNECTED_CHANNEL)		//user configurable factor
 #define	USER_WAYS				8			//user configurable factor
 //************************************************************************
@@ -225,6 +225,7 @@ void InitNandArray();
 void CheckConfigRestriction();
 
 extern unsigned int storageCapacity_L;
+extern unsigned int storageCapacity_L_fake;
 extern V2FMCRegisters* chCtlReg[USER_CHANNELS];
 
 #endif /* FTL_CONFIG_H_ */
