@@ -120,9 +120,11 @@ found:
 
 unsigned int wchunk_get(WChunkBucket *wchunkBucket,
                         unsigned int logicalSliceAddr) {
-    unsigned int virtualSliceAddr, selectedChunkStartAddr;
-    WChunkCache *ccache =
-        &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+    unsigned int virtualSliceAddr, selectedChunkStartAddr, indexInChunk;
+    WChunkCache *ccache;
+    WChunk_p selectedChunk;
+
+    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
     // directly return VSA_NONE on item count is zero
     // because alex loops when no element is inserted
@@ -134,31 +136,41 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
     if (selectedSlot < 0) {
         return VSA_FAIL;
     }
-    WChunk_p selectedChunk = ccache->wchunk_p[selectedSlot];
+    selectedChunk = ccache->wchunk_p[selectedSlot];
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
-    virtualSliceAddr =
-        selectedChunk->entries[logicalSliceAddr - selectedChunkStartAddr]
-            .virtualSliceAddr;
+    if (!wchunk_is_valid(ccache, selectedChunk, indexInChunk)) return VSA_FAIL;
+
+    virtualSliceAddr = selectedChunk->entries[indexInChunk].virtualSliceAddr;
 
     return virtualSliceAddr;
 }
 
 int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr) {
-    unsigned int selectedChunkStartAddr;
-    WChunkCache *ccache =
-        &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+    unsigned int selectedChunkStartAddr, indexInChunk;
+    WChunkCache *ccache;
+    WChunk_p selectedChunk;
+
+    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
     if (selectedSlot < 0) {
         return -1;
     }
-    WChunk_p selectedChunk = ccache->wchunk_p[selectedSlot];
+    selectedChunk = ccache->wchunk_p[selectedSlot];
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
-    selectedChunk->entries[logicalSliceAddr - selectedChunkStartAddr]
-        .virtualSliceAddr = virtualSliceAddr;
+    selectedChunk->entries[indexInChunk].virtualSliceAddr = virtualSliceAddr;
+
+    if (virtualSliceAddr != VSA_NONE)
+        wchunk_mark_valid(ccache, selectedChunk, indexInChunk,
+                          selectedChunkStartAddr, 1);
+    else
+        wchunk_mark_valid(ccache, selectedChunk, indexInChunk,
+                          selectedChunkStartAddr, 0);
 
     return 0;
 }
@@ -172,26 +184,54 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
     WChunk_p chunkp = (WChunk_p)allocator.allocate(1);
     // ftableMemPool += sizeof(WChunk);
 
-    memset(chunkp, VSA_NONE, sizeof(WChunk));
+    memset(&chunkp->entries, VSA_NONE,
+           sizeof(LOGICAL_SLICE_ENTRY) * WCHUNK_LENGTH);
 
     // for (int i = 0; i < WCHUNK_LENGTH; i++) {
     //     if (chunkp->entries[i].virtualSliceAddr != VSA_NONE)
     //         xil_printf("wchunk allocate error %d\n", i);
     // }
 
+    // init valid bits
+    chunkp->numOfValidBits = 0;
+    memset(&chunkp->validBits, 0,
+           sizeof(unsigned int) * WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH));
+
     wchunktree.insert(chunkStartAddr, chunkp);
 
     wchunk_print_alex_stats();
 
     size_t total, user, free;
-	int nr_blocks;
+    int nr_blocks;
     sm_malloc_stats(&total, &user, &free, &nr_blocks);
-    xil_printf("cur memory state: total=%d, user=%d, free=%d, nr_blocks=%d\n", total, user, free, nr_blocks);
-    
+    xil_printf("cur memory state: total=%d, user=%d, free=%d, nr_blocks=%d\n",
+               total, user, free, nr_blocks);
+
     return chunkp;
 }
 
+void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
+                       unsigned int chunkStartAddr) {
+    wchunktree.erase(chunkStartAddr);
+    allocator.deallocate(wchunk_p, 1);
 
+    xil_printf("wchunk deallocating chunk@%p, with startAddr=%p\n", wchunk_p,
+               chunkStartAddr);
+
+    // swap with the last one, and decrement the item count
+    for (int i = 0; i < ccache->curItemCount; i++) {
+        unsigned int startAddr = ccache->wchunkStartAddr[i];
+        // check if hit
+        if (startAddr == chunkStartAddr) {
+            // migrate the last slot's one and decrement
+            ccache->wchunkStartAddr[i] =
+                ccache->wchunkStartAddr[ccache->curItemCount - 1];
+            ccache->wchunk_p[i] = ccache->wchunk_p[ccache->curItemCount - 1];
+            ccache->lruValues[i] = ccache->lruValues[ccache->curItemCount - 1];
+            ccache->curItemCount--;
+        }
+    }
+}
 
 int wchunk_get_lru_slot(WChunkCache *ccache) {
     int minLruVal, minLruSlot;
@@ -227,4 +267,48 @@ void wchunk_print_alex_stats() {
         stats.num_keys, stats.num_model_nodes, stats.num_data_nodes,
         stats.num_downward_splits + stats.num_sideways_splits);
     wchunktree.report_models();
+}
+
+int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+                    unsigned int indexInChunk) {
+    int validBitIndex, validBitSelector;
+    validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk);
+    validBitSelector = WCHUNK_VALID_BIT_SELECTOR(indexInChunk);
+
+    return wchunk_p->validBits[validBitIndex] & validBitSelector;
+}
+
+void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+                       unsigned int indexInChunk, unsigned int wchunkStartAddr,
+                       int isValid) {
+    int validBitIndex, validBitSelector, origBits, newBits;
+    validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk);
+    validBitSelector = WCHUNK_VALID_BIT_SELECTOR(indexInChunk);
+
+    origBits = wchunk_p->validBits[validBitIndex];
+
+    if (isValid) {
+        // if original value was already on, just return
+        if (origBits & validBitSelector) return;
+        newBits = origBits | validBitSelector;
+        wchunk_p->numOfValidBits++;
+    } else {
+        // if original value was already off, just return
+        if (!(origBits & validBitSelector)) return;
+        newBits = origBits & (~validBitSelector);
+        wchunk_p->numOfValidBits--;
+    }
+    wchunk_p->validBits[validBitIndex] = newBits;
+
+    if (!isValid && wchunk_p->numOfValidBits % 1000 == 0) {
+        xil_printf(
+            "wchunk marking invalid: startAddr=%p, index=%d, bitIndex=%d, "
+            "selector=%p, lastBits=%d\n",
+            wchunkStartAddr, indexInChunk, validBitIndex, validBitSelector,
+            wchunk_p->numOfValidBits);
+    }
+
+    // deallocate totally unused chunk
+    if (wchunk_p->numOfValidBits == 0)
+        wchunk_deallocate(ccache, wchunk_p, wchunkStartAddr);
 }

@@ -24,7 +24,13 @@
 #define WCHUNK_BUCKET_INDEX(lsa) \
     ((lsa & WCHUNK_BUCKET_INDEX_MASK) >> WCHUNK_LENGTH_DIGIT)
 
+#define WCHUNK_VALID_BIT_INDEX(index) (index >> 5)
+#define WCHUNK_VALID_BIT_SELECTOR(index) (1 << (31 - (index & 0x1F)))
+
 typedef struct wchunk {
+    int numOfValidBits;  // number of valid bits, used for efficient decision of
+                         // erase
+    unsigned int validBits[WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH)];
     LOGICAL_SLICE_ENTRY entries[WCHUNK_LENGTH];
 } WChunk, *WChunk_p;
 
@@ -52,6 +58,13 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
 int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr);
 int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr);
+void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
+                       unsigned int chunkStartAddr);
+int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+                    unsigned int indexInChunk);
+void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+                       unsigned int indexInChunk, unsigned int wchunkStartAddr,
+                       int isValid);
 
 extern WChunkBucket *wchunkBucket;
 
