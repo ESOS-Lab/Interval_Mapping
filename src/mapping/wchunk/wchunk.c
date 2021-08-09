@@ -182,9 +182,16 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
     wchunktree.insert(chunkStartAddr, chunkp);
 
     wchunk_print_alex_stats();
+
+    size_t total, user, free;
+	int nr_blocks;
+    sm_malloc_stats(&total, &user, &free, &nr_blocks);
+    xil_printf("cur memory state: total=%d, user=%d, free=%d, nr_blocks=%d\n", total, user, free, nr_blocks);
     
     return chunkp;
 }
+
+
 
 int wchunk_get_lru_slot(WChunkCache *ccache) {
     int minLruVal, minLruSlot;
@@ -219,4 +226,5 @@ void wchunk_print_alex_stats() {
         "num_keys=%d, num_model_nodes=%d, num_data_nodes=%d, num_splits=%d\n",
         stats.num_keys, stats.num_model_nodes, stats.num_data_nodes,
         stats.num_downward_splits + stats.num_sideways_splits);
+    wchunktree.report_models();
 }

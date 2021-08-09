@@ -481,6 +481,27 @@ public:
 		return static_cast<data_node_type*>(cur);
 	}
 #endif
+	void report_models() {
+		auto root = static_cast<model_node_type*>(root_node_);
+		char print_string[1024];
+		sprintf(print_string, "Root node model a=%lf, b=%lf, num_children=%d, is_leaf=%d\n",
+					root->model_.a_, root->model_.b_,
+					root->num_children_, root->is_leaf_);
+		xil_printf("%s", print_string);
+		if (!root->is_leaf_) {
+			for (int i = 0; i < root->num_children_; i++) {
+				if (root->children_[i]->is_leaf_) {
+					auto child = static_cast<data_node_type*>(root->children_[i]);
+					sprintf(print_string, 
+						"Child data node %d model a=%lf, b=%lf, %d filled of %d\n",
+							i, root->children_[i]->model_.a_, 
+							root->children_[i]->model_.b_,
+							child->num_keys_, child->data_capacity_);
+					xil_printf("%s", print_string);
+				}
+			}
+		}
+	}
 
 private:
 	// Make a correction to the traversal path to instead point to the leaf node
