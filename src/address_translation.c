@@ -51,6 +51,9 @@
 #include "smalloc/smalloc.h"
 #include "mapping/wchunk/wchunk.h"
 
+#include "xtime_l.h"
+#include "xparameters.h"
+
 //P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
 P_VIRTUAL_BLOCK_MAP virtualBlockMapPtr;
@@ -704,15 +707,30 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	// 			!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
+//XTime lastReportTime;
+//int calls = 0;
+//XTime totalInvTime;
+//XTime totalSetTime;
+//int OSSD_TICK_PER_SEC = 500000000;
+
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
 
 	// if (logicalSliceAddr < SLICES_PER_SSD) {
+		XTime startTime, invTime, setTime;
+
+		// XTime_GetTime(&startTime);
 		InvalidateOldVsa(logicalSliceAddr);
+		// XTime_GetTime(&invTime);
 
 		virtualSliceAddr = FindFreeVirtualSlice();
 
 		wchunk_set(wchunkBucket, logicalSliceAddr, virtualSliceAddr);
+		// XTime_GetTime(&setTime);
+
+		// totalInvTime += (invTime - startTime);
+		// totalSetTime += (setTime - invTime);
+		// calls++;
 //		logicalSlice.insert(logicalSliceAddr, virtualSliceAddr);
 
 		// virtualSlice.insert(virtualSliceAddr, logicalSliceAddr);
@@ -720,6 +738,21 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 //				virtualSliceAddr;
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
 				logicalSliceAddr;
+
+		// if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+		// 	char reportString[1024];
+		// 	sprintf(reportString, 
+		// 	"sec %f reporting calls: %d avg_invTime: %f avg_setTime: %f\n", 
+		// 		1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
+		// 		1.0 * totalInvTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+		// 		1.0 * totalSetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
+		// 	xil_printf("%s", reportString);
+			
+		// 	lastReportTime = startTime;
+		// 	calls = 0;
+		// 	totalInvTime = 0;
+		// 	totalSetTime = 0;
+		// }
 
 		return virtualSliceAddr;
 	// } else
@@ -815,10 +848,23 @@ unsigned int FindDieForFreeSliceAllocation() {
 	return targetDie;
 }
 
+XTime lastReportTime_I = 0;
+int calls_I = 0;
+XTime totalGetTime = 0;
+XTime totalRemoveTime = 0;
+XTime maxGetTime = 0;
+XTime maxRemoveTime = 0;
+int OSSD_TICK_PER_SEC = 500000000;
+
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
+	XTime startTime, getTime, removeTime;
+
+	XTime_GetTime(&startTime);
 
 	virtualSliceAddr = wchunk_get(wchunkBucket, logicalSliceAddr);
+
+	XTime_GetTime(&getTime);
 //	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //	virtualSliceAddr =
 //			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
@@ -843,7 +889,35 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		PutToGcVictimList(dieNo, blockNo,
 				virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
 	}
+	XTime_GetTime(&removeTime);
+	
+	totalGetTime += (getTime - startTime);
+	totalRemoveTime += (removeTime - getTime);
+	calls_I++;
 
+	if (maxGetTime < getTime - startTime)
+		maxGetTime = getTime - startTime;
+	if (maxRemoveTime < removeTime - getTime)
+		maxRemoveTime = removeTime - getTime;
+
+	if (1.0 * (startTime - lastReportTime_I) / (OSSD_TICK_PER_SEC) >= 10) {
+		char reportString[1024];
+		sprintf(reportString, 
+		"sec %f reporting calls: %d avg_getTime: %f avg_removeTime: %f max_getTime: %f max_removeTime: %f\n", 
+			1.0 * startTime / (OSSD_TICK_PER_SEC), calls_I,
+			1.0 * totalGetTime / OSSD_TICK_PER_SEC * 1000000 / calls_I,
+			1.0 * totalRemoveTime / OSSD_TICK_PER_SEC * 1000000 / calls_I,
+			1.0 * maxGetTime / OSSD_TICK_PER_SEC * 1000000,
+			1.0 * maxRemoveTime / OSSD_TICK_PER_SEC * 1000000);
+		xil_printf("%s", reportString);
+		
+		lastReportTime_I = startTime;
+		calls_I = 0;
+		totalGetTime = 0;
+		totalRemoveTime = 0;
+		maxGetTime = 0;
+		maxRemoveTime = 0;
+	}
 }
 
 void EraseBlock(unsigned int dieNo, unsigned int blockNo) {

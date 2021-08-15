@@ -14,6 +14,8 @@
 #include "../../ftl_config.h"
 #include "../../memory_map.h"
 #include "xil_printf.h"
+#include "xparameters.h"
+#include "xtime_l.h"
 
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
@@ -46,8 +48,17 @@ void wchunk_init() {
     }
 }
 
+// XTime lastReportTime;
+// int calls = 0;
+// XTime totalCacheLoopTime;
+// XTime totalFindTime;
+// XTime totalAllocateTime;
+// XTime totalLruTime;
+// int OSSD_TICK_PER_SEC = 500000000;
+
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate) {
+    XTime startTime, cacheLoopTime, findTime, allocateTime, lruTime;
     int selectedSlot, bypassAlexFind = 0;
     WChunk_p selectedChunk = NULL;
     alex::Alex<unsigned int, WChunk_p>::Iterator it;
@@ -66,6 +77,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     }
 #endif
 
+    // XTime_GetTime(&startTime);
     for (int i = 0; i < ccache->curItemCount; i++) {
         unsigned int chunkStartAddr = ccache->wchunkStartAddr[i];
         // check if hit
@@ -75,6 +87,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
             goto found;
         }
     }
+    // XTime_GetTime(&cacheLoopTime);
 
     // bypass find
     // because alex loops when no element is inserted
@@ -82,6 +95,8 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
 
     // find from tree
     if (!bypassAlexFind) it = wchunktree.find(matchingChunkStartAddr);
+    // XTime_GetTime(&findTime);
+
     // xil_printf("here3\n");
     if (bypassAlexFind || it.cur_leaf_ == nullptr) {
         if (!isAllocate) return -1;
@@ -91,6 +106,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     } else {
         selectedChunk = it.payload();
     }
+    // XTime_GetTime(&allocateTime);
 
     // if chunk is found, find a slot
     if (ccache->curItemCount < WCHUNK_CACHE_SIZE) {
@@ -105,7 +121,33 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     // assign to the slot
     ccache->wchunkStartAddr[selectedSlot] = matchingChunkStartAddr;
     ccache->wchunk_p[selectedSlot] = selectedChunk;
+    // XTime_GetTime(&lruTime);
 
+    // totalCacheLoopTime += (cacheLoopTime - startTime);
+    // totalFindTime += (findTime - cacheLoopTime);
+    // totalAllocateTime += (allocateTime - findTime);
+    // totalLruTime += (lruTime - allocateTime);
+    // calls++;
+
+    // if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+    // 	char reportString[1024];
+    // 	sprintf(reportString,
+    // 	"sec %f reporting calls: %d avg_cTime: %f avg_fTime: %f avg_aTime: %f
+    // avg_lTime: %f\n", 		1.0 * startTime / (OSSD_TICK_PER_SEC),
+    // calls, 		1.0
+    // * totalCacheLoopTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls, 		1.0 * totalFindTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls, 		1.0 * totalAllocateTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls, 		1.0 * totalLruTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls); 	xil_printf("%s", reportString);
+
+    // 	lastReportTime = startTime;
+    // 	calls = 0;
+    // 	totalCacheLoopTime = 0;
+    // 	totalFindTime = 0;
+    //     totalAllocateTime = 0;
+    //     totalLruTime = 0;
+    // }
 found:
     // mark as most recently used one
     wchunk_mark_mru(ccache, selectedSlot);
@@ -201,11 +243,12 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
 
     wchunk_print_alex_stats();
 
-    size_t total, user, free;
-    int nr_blocks;
-    sm_malloc_stats(&total, &user, &free, &nr_blocks);
-    xil_printf("cur memory state: total=%d, user=%d, free=%d, nr_blocks=%d\n",
-               total, user, free, nr_blocks);
+    // size_t total, user, free;
+    // int nr_blocks;
+    // sm_malloc_stats(&total, &user, &free, &nr_blocks);
+    // xil_printf("cur memory state: total=%d, user=%d, free=%d,
+    // nr_blocks=%d\n",
+    //            total, user, free, nr_blocks);
 
     return chunkp;
 }
@@ -300,13 +343,13 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
     }
     wchunk_p->validBits[validBitIndex] = newBits;
 
-    if (!isValid && wchunk_p->numOfValidBits % 1000 == 0) {
-        xil_printf(
-            "wchunk marking invalid: startAddr=%p, index=%d, bitIndex=%d, "
-            "selector=%p, lastBits=%d\n",
-            wchunkStartAddr, indexInChunk, validBitIndex, validBitSelector,
-            wchunk_p->numOfValidBits);
-    }
+    // if (!isValid && wchunk_p->numOfValidBits % 1000 == 0) {
+    //     xil_printf(
+    //         "wchunk marking invalid: startAddr=%p, index=%d, bitIndex=%d, "
+    //         "selector=%p, lastBits=%d\n",
+    //         wchunkStartAddr, indexInChunk, validBitIndex, validBitSelector,
+    //         wchunk_p->numOfValidBits);
+    // }
 
     // deallocate totally unused chunk
     if (wchunk_p->numOfValidBits == 0)

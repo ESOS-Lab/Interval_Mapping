@@ -59,12 +59,15 @@
 #include "xil_printf.h"
 #include "debug.h"
 #include "io_access.h"
+#include "xtime_l.h"
+#include "xparameters.h"
 
 #include "nvme.h"
 #include "host_lld.h"
 #include "nvme_main.h"
 #include "nvme_admin_cmd.h"
 #include "nvme_io_cmd.h"
+#include "../request_allocation.h"
 
 #include "../memory_map.h"
 
@@ -73,6 +76,9 @@ volatile NVME_CONTEXT g_nvmeTask;
 void nvme_main()
 {
 	unsigned int exeLlr;
+	XTime lastTime, curTime;
+
+	XTime_GetTime(&lastTime);
 
 	xil_printf("!!! Wait until FTL reset complete !!! \r\n");
 
@@ -179,6 +185,22 @@ void nvme_main()
 			CheckDoneNvmeDmaReq();
 			SchedulingNandReq();
 		}
+
+		// XTime_GetTime(&curTime);
+		// if (1.0 * (curTime - lastTime) / (COUNTS_PER_SECOND) >= 1) {
+		// 	xil_printf("1 second passed");
+		// 	int blockedByRowCnt = 0, nandReqCnt = 0;
+		// 	for (int i = 0; i < USER_CHANNELS; i++) {
+		// 		for (int j = 0; j < USER_WAYS; j++) {
+		// 			blockedByRowCnt += blockedByRowAddrDepReqQ[i][j].reqCnt;
+		// 			nandReqCnt += nandReqQ[i][j].reqCnt;
+		// 		}
+		// 	}
+		// 	xil_printf("sliceReq=%d, blockedBuffer=%d, blockedByRow=%d, nvmeDma=%d, nandReq=%d\n", 
+		// 	sliceReqQ.reqCnt, blockedByBufDepReqQ.reqCnt, 
+		// 	blockedByRowCnt, nvmeDmaReqQ.reqCnt, nandReqCnt);
+		// 	lastTime = curTime;
+		// }
 	}
 }
 
