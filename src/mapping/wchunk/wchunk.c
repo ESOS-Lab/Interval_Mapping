@@ -23,6 +23,7 @@ char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 WChunkBucket *wchunkBucket;
 WChunkTree wchunktree;
 OpenSSDAllocator<WChunk> allocator = OpenSSDAllocator<WChunk>();
+WChunkEraseList wchunkEraseList;
 
 int wchunk_get_lru_slot(WChunkCache *ccache);
 void wchunk_mark_mru(WChunkCache *ccache, int slot);
@@ -116,7 +117,10 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
         selectedSlot = wchunk_get_lru_slot(ccache);
     }
 
-    if (selectedSlot < 0) assert(!"slot not exist!");
+    if (selectedSlot < 0) {
+        xil_printf("slot error lsa=%p\n", logicalSliceAddr);
+        assert(!"slot not exist!");
+    }
 
     // assign to the slot
     ccache->wchunkStartAddr[selectedSlot] = matchingChunkStartAddr;
@@ -208,17 +212,52 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     selectedChunk->entries[indexInChunk].virtualSliceAddr = virtualSliceAddr;
 
     if (virtualSliceAddr != VSA_NONE)
-        wchunk_mark_valid(ccache, selectedChunk, indexInChunk,
+        wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
                           selectedChunkStartAddr, 1);
     else
-        wchunk_mark_valid(ccache, selectedChunk, indexInChunk,
+        wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
                           selectedChunkStartAddr, 0);
 
     return 0;
 }
 
+int wchunk_set_range(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
+                     int length, unsigned int virtualSliceAddr) {
+    unsigned int selectedChunkStartAddr, indexInChunk;
+    WChunkCache *ccache;
+    WChunk_p selectedChunk;
+
+    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+
+    if (WCHUNK_BUCKET_INDEX(length))
+        assert(!"length exceed single chunk size.");
+
+    int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
+    if (selectedSlot < 0) {
+        return -1;
+    }
+    selectedChunk = ccache->wchunk_p[selectedSlot];
+    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
+
+    memset(selectedChunk->entries, virtualSliceAddr,
+           length * sizeof(logicalSliceAddr));
+
+    if (virtualSliceAddr != VSA_NONE)
+        wchunk_mark_valid(ccache, selectedChunk, indexInChunk, length,
+                          selectedChunkStartAddr, 1);
+    else
+        wchunk_mark_valid(ccache, selectedChunk, indexInChunk, length,
+                          selectedChunkStartAddr, 0);
+}
+
 int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr) {
     return wchunk_set(wchunkBucket, logicalSliceAddr, VSA_NONE);
+}
+
+int wchunk_remove_range(WChunkBucket *wchunkBucket,
+                        unsigned int logicalSliceAddr, int length) {
+    return wchunk_set_range(wchunkBucket, logicalSliceAddr, length, VSA_NONE);
 }
 
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
@@ -322,26 +361,28 @@ int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
 }
 
 void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
-                       unsigned int indexInChunk, unsigned int wchunkStartAddr,
-                       int isValid) {
+                       unsigned int indexInChunk, int length,
+                       unsigned int wchunkStartAddr, int isValid) {
     int validBitIndex, validBitSelector, origBits, newBits;
-    validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk);
-    validBitSelector = WCHUNK_VALID_BIT_SELECTOR(indexInChunk);
+    for (int i = 0; i < length; i++) {
+        validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk + i);
+        validBitSelector = WCHUNK_VALID_BIT_SELECTOR(indexInChunk + i);
 
-    origBits = wchunk_p->validBits[validBitIndex];
+        origBits = wchunk_p->validBits[validBitIndex];
 
-    if (isValid) {
-        // if original value was already on, just return
-        if (origBits & validBitSelector) return;
-        newBits = origBits | validBitSelector;
-        wchunk_p->numOfValidBits++;
-    } else {
-        // if original value was already off, just return
-        if (!(origBits & validBitSelector)) return;
-        newBits = origBits & (~validBitSelector);
-        wchunk_p->numOfValidBits--;
+        if (isValid) {
+            // if original value was already on, just return
+            if (origBits & validBitSelector) return;
+            newBits = origBits | validBitSelector;
+            wchunk_p->numOfValidBits++;
+        } else {
+            // if original value was already off, just return
+            if (!(origBits & validBitSelector)) return;
+            newBits = origBits & (~validBitSelector);
+            wchunk_p->numOfValidBits--;
+        }
+        wchunk_p->validBits[validBitIndex] = newBits;
     }
-    wchunk_p->validBits[validBitIndex] = newBits;
 
     // if (!isValid && wchunk_p->numOfValidBits % 1000 == 0) {
     //     xil_printf(
@@ -353,5 +394,24 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
 
     // deallocate totally unused chunk
     if (wchunk_p->numOfValidBits == 0)
-        wchunk_deallocate(ccache, wchunk_p, wchunkStartAddr);
+        // wchunk_deallocate(ccache, wchunk_p, wchunkStartAddr);
+        wchunk_add_erase_chunk(wchunk_p, wchunkStartAddr);
+}
+
+void wchunk_add_erase_chunk(WChunk_p wchunk_p, unsigned int wchunkStartAddr) {
+    wchunkEraseList.wchunk_p[wchunkEraseList.curItemCount] = wchunk_p;
+    wchunkEraseList.wchunkStartAddr[wchunkEraseList.curItemCount] =
+        wchunkStartAddr;
+    wchunkEraseList.curItemCount++;
+}
+
+void wchunk_handle_erase(WChunkBucket *wchunkBucket) {
+    WChunkCache *ccache;
+    for (int i = 0; i < wchunkEraseList.curItemCount; i++) {
+        ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(
+            wchunkEraseList.wchunkStartAddr[i])];
+        wchunk_deallocate(ccache, wchunkEraseList.wchunk_p[i],
+                          wchunkEraseList.wchunkStartAddr[i]);
+    }
+    wchunkEraseList.curItemCount = 0;
 }

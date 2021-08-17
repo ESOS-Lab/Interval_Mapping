@@ -167,7 +167,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 								unsigned int dsmAddrH,
                                 unsigned int dsmAddrL,
                                 int isDeallocate) {
-    unsigned int reqSlotTag, tempLsa, dsmOffset;
+    unsigned int reqSlotTag, tempLsa, dsmOffset, tempLen;
 	unsigned int rangeSize, devAddr;
 
 	if (!smalloc_curr_pool.pool) {
@@ -189,16 +189,21 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		// TODO: convert to 64-bit LBA
 		tempLsa = dsmRange->startingLBA[0] / NVME_BLOCKS_PER_SLICE;
 		dsmOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
-
+		
 		// TODO: handle offsetted Slices
 		if (dsmOffset > 0) tempLsa++;
 
+		tempLen = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks - 4) / NVME_BLOCKS_PER_SLICE - tempLsa + 1;
+
 		// TODO: convert to 64-bit LBA
 		// invalidate slice
-		while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
-			InvalidateOldVsa(tempLsa);
-			tempLsa++;
-		}
+		// xil_printf("start=%d, length=%d translated to lsa=%d, len=%d\n", 
+		// 	dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks, tempLsa, tempLen);
+		InvalidateOldVsaAll(tempLsa, tempLen);
+		// while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
+		// 	InvalidateOldVsa(tempLsa);
+		// 	tempLsa++;
+		// }
 	}
 	
     NVME_COMPLETION nvmeCPL;

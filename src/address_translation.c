@@ -858,13 +858,9 @@ int OSSD_TICK_PER_SEC = 500000000;
 
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
-	XTime startTime, getTime, removeTime;
-
-	XTime_GetTime(&startTime);
 
 	virtualSliceAddr = wchunk_get(wchunkBucket, logicalSliceAddr);
 
-	XTime_GetTime(&getTime);
 //	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //	virtualSliceAddr =
 //			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
@@ -889,35 +885,45 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		PutToGcVictimList(dieNo, blockNo,
 				virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
 	}
-	XTime_GetTime(&removeTime);
-	
-	totalGetTime += (getTime - startTime);
-	totalRemoveTime += (removeTime - getTime);
-	calls_I++;
+}
 
-	if (maxGetTime < getTime - startTime)
-		maxGetTime = getTime - startTime;
-	if (maxRemoveTime < removeTime - getTime)
-		maxRemoveTime = removeTime - getTime;
+void InvalidateOldVsaAll(unsigned int logicalSliceAddr, int length) {
+	unsigned int virtualSliceAddr, dieNo, blockNo;
+	XTime startTime, getTime, removeTime;
+	int is_success = 1;
 
-	if (1.0 * (startTime - lastReportTime_I) / (OSSD_TICK_PER_SEC) >= 10) {
-		char reportString[1024];
-		sprintf(reportString, 
-		"sec %f reporting calls: %d avg_getTime: %f avg_removeTime: %f max_getTime: %f max_removeTime: %f\n", 
-			1.0 * startTime / (OSSD_TICK_PER_SEC), calls_I,
-			1.0 * totalGetTime / OSSD_TICK_PER_SEC * 1000000 / calls_I,
-			1.0 * totalRemoveTime / OSSD_TICK_PER_SEC * 1000000 / calls_I,
-			1.0 * maxGetTime / OSSD_TICK_PER_SEC * 1000000,
-			1.0 * maxRemoveTime / OSSD_TICK_PER_SEC * 1000000);
-		xil_printf("%s", reportString);
-		
-		lastReportTime_I = startTime;
-		calls_I = 0;
-		totalGetTime = 0;
-		totalRemoveTime = 0;
-		maxGetTime = 0;
-		maxRemoveTime = 0;
+	for (int i = 0; i < length; i++) {
+		virtualSliceAddr = wchunk_get(wchunkBucket, logicalSliceAddr + i);
+
+	//	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
+	//	virtualSliceAddr =
+	//			logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
+
+		if (virtualSliceAddr != VSA_NONE) {
+	//		if (virtualSlice.find(virtualSliceAddr).payload() != logicalSliceAddr)
+			if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr
+					!= logicalSliceAddr + i) {
+				is_success = 0;
+				continue;
+			}
+
+			dieNo = Vsa2VdieTranslation(virtualSliceAddr);
+			blockNo = Vsa2VblockTranslation(virtualSliceAddr);
+
+			// unlink
+			SelectiveGetFromGcVictimList(dieNo, blockNo);
+			virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
+	//		logicalSlice.erase(logicalSliceAddr);
+	//		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
+	//		VSA_NONE;
+
+			PutToGcVictimList(dieNo, blockNo,
+					virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
+		} else
+			is_success = 0;
 	}
+	if (is_success)
+		wchunk_remove_range(wchunkBucket, logicalSliceAddr, length);
 }
 
 void EraseBlock(unsigned int dieNo, unsigned int blockNo) {
