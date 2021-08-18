@@ -229,7 +229,7 @@ int wchunk_set_range(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
 
     ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
-    if (WCHUNK_BUCKET_INDEX(length))
+    if (length & WCHUNK_START_ADDR_MASK)
         assert(!"length exceed single chunk size.");
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
@@ -257,6 +257,8 @@ int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr) {
 
 int wchunk_remove_range(WChunkBucket *wchunkBucket,
                         unsigned int logicalSliceAddr, int length) {
+    xil_printf("removing bucket=%p, lsa=%d, length=%d\n", wchunkBucket,
+               logicalSliceAddr, length);
     return wchunk_set_range(wchunkBucket, logicalSliceAddr, length, VSA_NONE);
 }
 

@@ -197,13 +197,13 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 
 		// TODO: convert to 64-bit LBA
 		// invalidate slice
-		// xil_printf("start=%d, length=%d translated to lsa=%d, len=%d\n", 
+		// xil_printf("HandlingDSM: start=%d, length=%d translated to lsa=%d, len=%d\n", 
 		// 	dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks, tempLsa, tempLen);
-		InvalidateOldVsaAll(tempLsa, tempLen);
-		// while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
-		// 	InvalidateOldVsa(tempLsa);
-		// 	tempLsa++;
-		// }
+		// InvalidateOldVsaAll(tempLsa, tempLen);
+		while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
+			InvalidateOldVsa(tempLsa);
+			tempLsa++;
+		}
 	}
 	
     NVME_COMPLETION nvmeCPL;
