@@ -192,24 +192,40 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
 
     return virtualSliceAddr;
 }
+//XTime lastReportTime_I = 0;
+//int calls = 0;
+//XTime totalSelectTime = 0;
+//XTime totalMidTime = 0;
+//XTime totalMarkTime = 0;
+//XTime maxSelectTime = 0;
+//XTime maxMidTime = 0;
+//XTime maxMarkTime = 0;
+//int OSSD_TICK_PER_SEC = 500000000;
 
 int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr) {
+    // XTime startTime, selectTime, midTime, markTime;
     unsigned int selectedChunkStartAddr, indexInChunk;
     WChunkCache *ccache;
     WChunk_p selectedChunk;
 
+    // if (virtualSliceAddr == VSA_NONE)
+	// XTime_GetTime(&startTime);
     ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
     if (selectedSlot < 0) {
         return -1;
     }
+    // if (virtualSliceAddr == VSA_NONE)
+    // XTime_GetTime(&selectTime);
     selectedChunk = ccache->wchunk_p[selectedSlot];
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
     selectedChunk->entries[indexInChunk].virtualSliceAddr = virtualSliceAddr;
+    // if (virtualSliceAddr == VSA_NONE)
+    // XTime_GetTime(&midTime);
 
     if (virtualSliceAddr != VSA_NONE)
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
@@ -218,6 +234,52 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
                           selectedChunkStartAddr, 0);
 
+    // if (virtualSliceAddr == VSA_NONE)
+    // XTime_GetTime(&markTime);
+    
+    // if (virtualSliceAddr == VSA_NONE)
+    // calls++;
+
+    // if (virtualSliceAddr == VSA_NONE)
+    // totalSelectTime += (selectTime - startTime);
+    // if (virtualSliceAddr == VSA_NONE)
+    // totalMidTime += (midTime - selectTime);
+    // if (virtualSliceAddr == VSA_NONE)
+    // totalMarkTime += (markTime - midTime);
+
+    // if (virtualSliceAddr == VSA_NONE)
+	// if (maxSelectTime < selectTime - startTime)
+	// 	maxSelectTime = selectTime - startTime;
+    // if (virtualSliceAddr == VSA_NONE)
+	// if (maxMidTime < midTime - selectTime)
+	// 	maxMidTime = midTime - selectTime;
+    // if (virtualSliceAddr == VSA_NONE)
+	// if (maxMarkTime < markTime - midTime)
+	// 	maxMarkTime = markTime - midTime;
+
+    // if (virtualSliceAddr == VSA_NONE)
+	// if (1.0 * (startTime - lastReportTime_I) / (OSSD_TICK_PER_SEC) >= 10) {
+	// 	char reportString[1024];
+	// 	sprintf(reportString, 
+	// 	"sec %f reporting calls: %d avg_selectTime: %f avg_midTime: %f avg_markTime: %f max_selectTime: %f max_midTime: %f max_markTime: %f  %f\n", 
+	// 		1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
+	// 		1.0 * totalSelectTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+	// 		1.0 * totalMidTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+	// 		1.0 * totalMarkTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+	// 		1.0 * maxSelectTime / OSSD_TICK_PER_SEC * 1000000,
+	// 		1.0 * maxMidTime / OSSD_TICK_PER_SEC * 1000000,
+	// 		1.0 * maxMarkTime / OSSD_TICK_PER_SEC * 1000000);
+	// 	xil_printf("%s", reportString);
+		
+	// 	lastReportTime_I = startTime;
+	// 	calls = 0;
+	// 	totalSelectTime = 0;
+	// 	totalMidTime = 0;
+	// 	totalMarkTime = 0;
+	// 	maxSelectTime = 0;
+	// 	maxMidTime = 0;
+	// 	maxMarkTime = 0;
+	// }
     return 0;
 }
 

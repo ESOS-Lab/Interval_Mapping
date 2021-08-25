@@ -54,6 +54,8 @@
 #include "memory_map.h"
 #include "ftl_config.h"
 #include "smalloc/smalloc.h"
+#include "xtime_l.h"
+#include "xparameters.h"
 
 P_ROW_ADDR_DEPENDENCY_TABLE rowAddrDependencyTablePtr;
 
@@ -162,6 +164,13 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	PutToSliceReqQ(reqSlotTag);
 }
 
+XTime lastReportTime_I = 0;
+int calls = 0;
+XTime totalMallocTime = 0;
+XTime totalDmaTime = 0;
+XTime totalMemcpyTime = 0;
+XTime totalInvTime = 0;
+int OSSD_TICK_PER_SEC = 500000000;
 void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 unsigned int numRanges, 
 								unsigned int dsmAddrH,
@@ -169,27 +178,37 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 int isDeallocate) {
     unsigned int reqSlotTag, tempLsa, dsmOffset, tempLen;
 	unsigned int rangeSize, devAddr;
+	// XTime start, malloc, dma, memc, inv;
 
-	if (!smalloc_curr_pool.pool) {
-		size_t size = (size_t)allocator_end_addr - (size_t)allocator_start_addr;
-		sm_set_default_pool((void*)allocator_start_addr, size, 0, 0);
-	}
+	// XTime_GetTime(&start);
+
+	// if (!smalloc_curr_pool.pool) {
+	// 	size_t size = (size_t)allocator_end_addr - (size_t)allocator_start_addr;
+	// 	sm_set_default_pool((void*)allocator_start_addr, size, 0, 0);
+	// }
+
 
 	rangeSize = (numRanges + 1) * sizeof(DATASET_MANAGEMENT_RANGE);
-	devAddr = (unsigned int) sm_malloc(rangeSize);
+	// devAddr = (unsigned int) sm_malloc(rangeSize);
+
+	// XTime_GetTime(&malloc);
 
     set_direct_rx_dma(ADMIN_CMD_DRAM_DATA_BUFFER, dsmAddrH, dsmAddrL, rangeSize);
 	check_direct_rx_dma_done();
 
-	memcpy((void *)devAddr, (void *)ADMIN_CMD_DRAM_DATA_BUFFER, rangeSize);
+	// XTime_GetTime(&dma);
 
-	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)devAddr;
-		
+	// memcpy((void *)devAddr, (void *)ADMIN_CMD_DRAM_DATA_BUFFER, rangeSize);
+
+	// XTime_GetTime(&memc);
+
+	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)ADMIN_CMD_DRAM_DATA_BUFFER;
+
 	for (int i = 0; i < numRanges + 1; i++, dsmRange++) {
 		// TODO: convert to 64-bit LBA
 		tempLsa = dsmRange->startingLBA[0] / NVME_BLOCKS_PER_SLICE;
 		dsmOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
-		
+
 		// TODO: handle offsetted Slices
 		if (dsmOffset > 0) tempLsa++;
 
@@ -197,8 +216,8 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 
 		// TODO: convert to 64-bit LBA
 		// invalidate slice
-		// xil_printf("HandlingDSM: start=%d, length=%d translated to lsa=%d, len=%d\n", 
-		// 	dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks, tempLsa, tempLen);
+		// xil_printf("HandlingDSM: start=%d, length=%d\n",
+		// 	dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
 		// InvalidateOldVsaAll(tempLsa, tempLen);
 		while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
 			InvalidateOldVsa(tempLsa);
@@ -206,6 +225,8 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		}
 	}
 	
+	// XTime_GetTime(&inv);
+
     NVME_COMPLETION nvmeCPL;
 	nvmeCPL.dword[0] = 0;
     nvmeCPL.specific = 0x0;
@@ -214,6 +235,31 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 	// reqSlotTag = GetFromFreeReqQ();
 
 	// reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_
+
+	// calls++;
+	// totalMallocTime += (malloc - start);
+	// totalDmaTime += (dma - malloc);
+	// totalMemcpyTime += (memc - dma);
+	// totalInvTime += (inv - memc);
+	
+	// if (1.0 * (start - lastReportTime_I) / (OSSD_TICK_PER_SEC) >= 10) {
+	// 	char reportString[1024];
+	// 	sprintf(reportString, 
+	// 	"sec %f reporting calls: %d mallocTime: %f dmaTime: %f memcpyTime: %f invTime: %f\n", 
+	// 		1.0 * start / (OSSD_TICK_PER_SEC), calls,
+	// 		1.0 * totalMallocTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+	// 		1.0 * totalDmaTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+	// 		1.0 * totalMemcpyTime / OSSD_TICK_PER_SEC * 1000000 / calls,
+	// 		1.0 * totalInvTime / OSSD_TICK_PER_SEC * 1000000 / calls);
+	// 	xil_printf("%s", reportString);
+		
+	// 	lastReportTime_I = start;
+	// 	calls = 0;
+	// 	totalMallocTime = 0;
+	// 	totalDmaTime = 0;
+	// 	totalMemcpyTime = 0;
+	// 	totalInvTime = 0;
+	// }
 }
 
 void EvictDataBufEntry(unsigned int originReqSlotTag)
