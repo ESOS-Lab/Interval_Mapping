@@ -164,13 +164,13 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	PutToSliceReqQ(reqSlotTag);
 }
 
-XTime lastReportTime_I = 0;
-int calls = 0;
-XTime totalMallocTime = 0;
-XTime totalDmaTime = 0;
-XTime totalMemcpyTime = 0;
-XTime totalInvTime = 0;
-int OSSD_TICK_PER_SEC = 500000000;
+//XTime lastReportTime_I = 0;
+//int calls = 0;
+//XTime totalMallocTime = 0;
+//XTime totalDmaTime = 0;
+//XTime totalMemcpyTime = 0;
+//XTime totalInvTime = 0;
+//int OSSD_TICK_PER_SEC = 500000000;
 void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 unsigned int numRanges, 
 								unsigned int dsmAddrH,
