@@ -192,15 +192,15 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
 
     return virtualSliceAddr;
 }
-//XTime lastReportTime_I = 0;
-//int calls = 0;
-//XTime totalSelectTime = 0;
-//XTime totalMidTime = 0;
-//XTime totalMarkTime = 0;
-//XTime maxSelectTime = 0;
-//XTime maxMidTime = 0;
-//XTime maxMarkTime = 0;
-//int OSSD_TICK_PER_SEC = 500000000;
+// XTime lastReportTime_I = 0;
+// int calls = 0;
+// XTime totalSelectTime = 0;
+// XTime totalMidTime = 0;
+// XTime totalMarkTime = 0;
+// XTime maxSelectTime = 0;
+// XTime maxMidTime = 0;
+// XTime maxMarkTime = 0;
+// int OSSD_TICK_PER_SEC = 500000000;
 
 int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr) {
@@ -210,7 +210,7 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     WChunk_p selectedChunk;
 
     // if (virtualSliceAddr == VSA_NONE)
-	// XTime_GetTime(&startTime);
+    // XTime_GetTime(&startTime);
     ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
@@ -229,14 +229,14 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
 
     if (virtualSliceAddr != VSA_NONE)
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
-                          selectedChunkStartAddr, 1);
+                          selectedChunkStartAddr, 1, WCHUNK_FULL_BITS_IN_SLICE);
     else
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
-                          selectedChunkStartAddr, 0);
+                          selectedChunkStartAddr, 0, WCHUNK_FULL_BITS_IN_SLICE);
 
     // if (virtualSliceAddr == VSA_NONE)
     // XTime_GetTime(&markTime);
-    
+
     // if (virtualSliceAddr == VSA_NONE)
     // calls++;
 
@@ -248,38 +248,40 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     // totalMarkTime += (markTime - midTime);
 
     // if (virtualSliceAddr == VSA_NONE)
-	// if (maxSelectTime < selectTime - startTime)
-	// 	maxSelectTime = selectTime - startTime;
+    // if (maxSelectTime < selectTime - startTime)
+    // 	maxSelectTime = selectTime - startTime;
     // if (virtualSliceAddr == VSA_NONE)
-	// if (maxMidTime < midTime - selectTime)
-	// 	maxMidTime = midTime - selectTime;
+    // if (maxMidTime < midTime - selectTime)
+    // 	maxMidTime = midTime - selectTime;
     // if (virtualSliceAddr == VSA_NONE)
-	// if (maxMarkTime < markTime - midTime)
-	// 	maxMarkTime = markTime - midTime;
+    // if (maxMarkTime < markTime - midTime)
+    // 	maxMarkTime = markTime - midTime;
 
     // if (virtualSliceAddr == VSA_NONE)
-	// if (1.0 * (startTime - lastReportTime_I) / (OSSD_TICK_PER_SEC) >= 10) {
-	// 	char reportString[1024];
-	// 	sprintf(reportString, 
-	// 	"sec %f reporting calls: %d avg_selectTime: %f avg_midTime: %f avg_markTime: %f max_selectTime: %f max_midTime: %f max_markTime: %f  %f\n", 
-	// 		1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
-	// 		1.0 * totalSelectTime / OSSD_TICK_PER_SEC * 1000000 / calls,
-	// 		1.0 * totalMidTime / OSSD_TICK_PER_SEC * 1000000 / calls,
-	// 		1.0 * totalMarkTime / OSSD_TICK_PER_SEC * 1000000 / calls,
-	// 		1.0 * maxSelectTime / OSSD_TICK_PER_SEC * 1000000,
-	// 		1.0 * maxMidTime / OSSD_TICK_PER_SEC * 1000000,
-	// 		1.0 * maxMarkTime / OSSD_TICK_PER_SEC * 1000000);
-	// 	xil_printf("%s", reportString);
-		
-	// 	lastReportTime_I = startTime;
-	// 	calls = 0;
-	// 	totalSelectTime = 0;
-	// 	totalMidTime = 0;
-	// 	totalMarkTime = 0;
-	// 	maxSelectTime = 0;
-	// 	maxMidTime = 0;
-	// 	maxMarkTime = 0;
-	// }
+    // if (1.0 * (startTime - lastReportTime_I) / (OSSD_TICK_PER_SEC) >= 10) {
+    // 	char reportString[1024];
+    // 	sprintf(reportString,
+    // 	"sec %f reporting calls: %d avg_selectTime: %f avg_midTime: %f
+    // avg_markTime: %f max_selectTime: %f max_midTime: %f max_markTime: %f
+    // %f\n", 		1.0 * startTime / (OSSD_TICK_PER_SEC),
+    // calls, 		1.0
+    // * totalSelectTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls, 		1.0 * totalMidTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls, 		1.0 * totalMarkTime / OSSD_TICK_PER_SEC * 1000000 /
+    // calls, 		1.0 * maxSelectTime / OSSD_TICK_PER_SEC * 1000000,
+    // 1.0 * maxMidTime / OSSD_TICK_PER_SEC *
+    // 1000000, 		1.0 * maxMarkTime / OSSD_TICK_PER_SEC *
+    // 1000000); 	xil_printf("%s", reportString);
+
+    // 	lastReportTime_I = startTime;
+    // 	calls = 0;
+    // 	totalSelectTime = 0;
+    // 	totalMidTime = 0;
+    // 	totalMarkTime = 0;
+    // 	maxSelectTime = 0;
+    // 	maxMidTime = 0;
+    // 	maxMarkTime = 0;
+    // }
     return 0;
 }
 
@@ -307,10 +309,10 @@ int wchunk_set_range(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
 
     if (virtualSliceAddr != VSA_NONE)
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, length,
-                          selectedChunkStartAddr, 1);
+                          selectedChunkStartAddr, 1, WCHUNK_FULL_BITS_IN_SLICE);
     else
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, length,
-                          selectedChunkStartAddr, 0);
+                          selectedChunkStartAddr, 0, WCHUNK_FULL_BITS_IN_SLICE);
 }
 
 int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr) {
@@ -419,32 +421,48 @@ int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                     unsigned int indexInChunk) {
     int validBitIndex, validBitSelector;
     validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk);
-    validBitSelector = WCHUNK_VALID_BIT_SELECTOR(indexInChunk);
+    validBitSelector =
+        WCHUNK_VALID_BIT_SELECTOR(indexInChunk, WCHUNK_FULL_BITS_IN_SLICE);
 
     return wchunk_p->validBits[validBitIndex] & validBitSelector;
 }
 
 void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                        unsigned int indexInChunk, int length,
-                       unsigned int wchunkStartAddr, int isValid) {
-    int validBitIndex, validBitSelector, origBits, newBits;
+                       unsigned int wchunkStartAddr, int isValid,
+                       int bitsInSlice) {
+    int validBitIndex, validBitSelector, origBits, newBits, numBits = 0;
     for (int i = 0; i < length; i++) {
         validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk + i);
-        validBitSelector = WCHUNK_VALID_BIT_SELECTOR(indexInChunk + i);
+        validBitSelector =
+            WCHUNK_VALID_BIT_SELECTOR(indexInChunk + i, bitsInSlice);
 
         origBits = wchunk_p->validBits[validBitIndex];
 
         if (isValid) {
             // if original value was already on, just return
-            if (origBits & validBitSelector) return;
+            // if (origBits & validBitSelector == validBitSelector) return;
             newBits = origBits | validBitSelector;
-            wchunk_p->numOfValidBits++;
         } else {
             // if original value was already off, just return
-            if (!(origBits & validBitSelector)) return;
+            // if (!(origBits & validBitSelector)) return;
             newBits = origBits & (~validBitSelector);
-            wchunk_p->numOfValidBits--;
+
+            // if (length == 1)
+            //     xil_printf(
+            //         "mark_invalid: startAddr=%d, selector=%p, newpop=%d, "
+            //         "oldpop=%d\n",
+            //         wchunkStartAddr, validBitSelector,
+            //         __builtin_popcountl(newBits),
+            //         __builtin_popcountl(origBits));
+
+            // if (wchunk_p->numOfValidBits < 100) {
+            //     xil_printf("found low chunk: startAddr=%p, num=%d\n",
+            //                wchunkStartAddr, wchunk_p->numOfValidBits);
+            //            }
         }
+        wchunk_p->numOfValidBits +=
+            __builtin_popcountl(newBits) - __builtin_popcountl(origBits);
         wchunk_p->validBits[validBitIndex] = newBits;
     }
 
@@ -458,8 +476,48 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
 
     // deallocate totally unused chunk
     if (wchunk_p->numOfValidBits == 0)
-        // wchunk_deallocate(ccache, wchunk_p, wchunkStartAddr);
-        wchunk_add_erase_chunk(wchunk_p, wchunkStartAddr);
+        wchunk_deallocate(ccache, wchunk_p, wchunkStartAddr);
+    // wchunk_add_erase_chunk(wchunk_p, wchunkStartAddr);
+}
+
+void wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
+                               unsigned int logicalSliceAddr, int isValid,
+                               int start, int end) {
+    unsigned int selectedChunkStartAddr, indexInChunk;
+    WChunkCache *ccache;
+    WChunk_p selectedChunk;
+
+    int validBitIndex, bitsInSlice, origBits, newBits;
+
+    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+
+    // directly return VSA_NONE on item count is zero
+    // because alex loops when no element is inserted
+    if (ccache->curItemCount == 0) {
+        return;
+    }
+
+    int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 0);
+    if (selectedSlot < 0) {
+        return;
+    }
+    selectedChunk = ccache->wchunk_p[selectedSlot];
+    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
+
+    bitsInSlice = 0;
+    for (int i = start; i < end; i++) {
+        bitsInSlice += (1 << (3 - i));
+    }
+    // xil_printf(
+    //     "before partial mark: addr=%d, validNum=%d, start=%d, end=%d\n",
+    //     logicalSliceAddr, selectedChunk->numOfValidBits, start, end);
+
+    wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
+                      selectedChunkStartAddr, isValid, bitsInSlice);
+
+    // xil_printf("partial mark: startAddr=%d, validNum=%d\n",
+    //            selectedChunkStartAddr, selectedChunk->numOfValidBits);
 }
 
 void wchunk_add_erase_chunk(WChunk_p wchunk_p, unsigned int wchunkStartAddr) {

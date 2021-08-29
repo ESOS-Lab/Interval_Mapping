@@ -24,8 +24,10 @@
 #define WCHUNK_BUCKET_INDEX(lsa) \
     ((lsa & WCHUNK_BUCKET_INDEX_MASK) >> WCHUNK_LENGTH_DIGIT)
 
-#define WCHUNK_VALID_BIT_INDEX(index) (index >> 5)
-#define WCHUNK_VALID_BIT_SELECTOR(index) (1 << (31 - (index & 0x1F)))
+#define WCHUNK_VALID_BIT_INDEX(index) (index >> 3)
+#define WCHUNK_VALID_BIT_SELECTOR(index, bitsInSlice) \
+    (bitsInSlice << (28 - ((index & 0x7) << 2)))
+#define WCHUNK_FULL_BITS_IN_SLICE 0xF
 
 #define WCHUNK_ERASE_LIST_LENGTH (1024)
 
@@ -77,7 +79,11 @@ int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                     unsigned int indexInChunk);
 void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                        unsigned int indexInChunk, int length,
-                       unsigned int wchunkStartAddr, int isValid);
+                       unsigned int wchunkStartAddr, int isValid,
+                       int bitsInSlice);
+void wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
+                               unsigned int logicalSliceAddr, int isValid,
+                               int start, int end);
 
 void wchunk_add_erase_chunk(WChunk_p wchunk_p, unsigned int wchunkStartAddr);
 void wchunk_handle_erase(WChunkBucket *wchunkBucket);

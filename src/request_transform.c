@@ -56,6 +56,7 @@
 #include "smalloc/smalloc.h"
 #include "xtime_l.h"
 #include "xparameters.h"
+#include "mapping/wchunk/wchunk.h"
 
 P_ROW_ADDR_DEPENDENCY_TABLE rowAddrDependencyTablePtr;
 
@@ -210,17 +211,26 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		dsmOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
 
 		// TODO: handle offsetted Slices
-		if (dsmOffset > 0) tempLsa++;
-
-		tempLen = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks - 4) / NVME_BLOCKS_PER_SLICE - tempLsa + 1;
-
+		
+		if (dsmOffset > 0) {
+			wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, dsmOffset, NVME_BLOCKS_PER_SLICE);
+			tempLsa++;
+			dsmOffset = 0;
+		}
+		
 		// TODO: convert to 64-bit LBA
 		// invalidate slice
 		// xil_printf("HandlingDSM: start=%d, length=%d\n",
-		// 	dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
+			// dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
 		// InvalidateOldVsaAll(tempLsa, tempLen);
 		while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
 			InvalidateOldVsa(tempLsa);
+			tempLsa++;
+		}
+		
+		dsmOffset = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) % NVME_BLOCKS_PER_SLICE;
+		if (dsmOffset > 0) {
+			wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, 0, dsmOffset);
 			tempLsa++;
 		}
 	}

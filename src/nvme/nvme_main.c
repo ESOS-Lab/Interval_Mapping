@@ -185,7 +185,7 @@ void nvme_main()
 		{
 			CheckDoneNvmeDmaReq();
 			SchedulingNandReq();
-			wchunk_handle_erase(wchunkBucket);
+			// wchunk_handle_erase(wchunkBucket);
 		}
 
 		// XTime_GetTime(&curTime);
