@@ -158,7 +158,7 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 	{
 		case IO_NVM_FLUSH:
 		{
-			xil_printf("IO Flush Command\r\n");
+			// xil_printf("IO Flush Command\r\n");
 			nvmeCPL.dword[0] = 0;
 			nvmeCPL.specific = 0x0;
 			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
@@ -178,7 +178,7 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 		}
 		case IO_NVM_DATASET_MANAGEMENT:
 		{
-			xil_printf("IO Dsm Command\r\n");
+			// xil_printf("IO Dsm Command\r\n");
 			handle_nvme_io_dataset_management(nvmeCmd->cmdSlotTag, nvmeIOCmd);
 			// nvmeCPL.dword[0] = 0;
 			// nvmeCPL.specific = 0x0;
