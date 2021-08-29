@@ -346,7 +346,7 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
 
     wchunktree.insert(chunkStartAddr, chunkp);
 
-    wchunk_print_alex_stats();
+    // wchunk_print_alex_stats();
 
     // size_t total, user, free;
     // int nr_blocks;
@@ -363,8 +363,8 @@ void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
     wchunktree.erase(chunkStartAddr);
     allocator.deallocate(wchunk_p, 1);
 
-    xil_printf("wchunk deallocating chunk@%p, with startAddr=%p\n", wchunk_p,
-               chunkStartAddr);
+    // xil_printf("wchunk deallocating chunk@%p, with startAddr=%p\n", wchunk_p,
+    //            chunkStartAddr);
 
     // swap with the last one, and decrement the item count
     for (int i = 0; i < ccache->curItemCount; i++) {
