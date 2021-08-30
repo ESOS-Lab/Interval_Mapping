@@ -179,6 +179,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 int isDeallocate) {
     unsigned int reqSlotTag, tempLsa, dsmOffset, tempLen;
 	unsigned int rangeSize, devAddr;
+	int isInvalidated;
 	// XTime start, malloc, dma, memc, inv;
 
 	// XTime_GetTime(&start);
@@ -213,7 +214,10 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		// TODO: handle offsetted Slices
 		
 		if (dsmOffset > 0) {
-			wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, dsmOffset, NVME_BLOCKS_PER_SLICE);
+			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, dsmOffset, NVME_BLOCKS_PER_SLICE);
+			if (isInvalidated) { 
+				InvalidateOldVsa(tempLsa);
+			}
 			tempLsa++;
 			dsmOffset = 0;
 		}
@@ -230,8 +234,10 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		
 		dsmOffset = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) % NVME_BLOCKS_PER_SLICE;
 		if (dsmOffset > 0) {
-			wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, 0, dsmOffset);
-			tempLsa++;
+			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, 0, dsmOffset);
+			if (isInvalidated) {
+				InvalidateOldVsa(tempLsa);
+			}
 		}
 	}
 	

@@ -480,7 +480,7 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
     // wchunk_add_erase_chunk(wchunk_p, wchunkStartAddr);
 }
 
-void wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
+int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
                                unsigned int logicalSliceAddr, int isValid,
                                int start, int end) {
     unsigned int selectedChunkStartAddr, indexInChunk;
@@ -494,12 +494,12 @@ void wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
     // directly return VSA_NONE on item count is zero
     // because alex loops when no element is inserted
     if (ccache->curItemCount == 0) {
-        return;
+        return 0;
     }
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 0);
     if (selectedSlot < 0) {
-        return;
+        return 0;
     }
     selectedChunk = ccache->wchunk_p[selectedSlot];
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
@@ -515,6 +515,10 @@ void wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
 
     wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
                       selectedChunkStartAddr, isValid, bitsInSlice);
+
+
+    // return 1 if the entry is totally invalidated, else 0
+    return !wchunk_is_valid(ccache, selectedChunk, indexInChunk);
 
     // xil_printf("partial mark: startAddr=%d, validNum=%d\n",
     //            selectedChunkStartAddr, selectedChunk->numOfValidBits);

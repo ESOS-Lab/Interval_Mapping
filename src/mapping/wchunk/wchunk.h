@@ -81,7 +81,7 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                        unsigned int indexInChunk, int length,
                        unsigned int wchunkStartAddr, int isValid,
                        int bitsInSlice);
-void wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
+int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
                                unsigned int logicalSliceAddr, int isValid,
                                int start, int end);
 
