@@ -634,8 +634,8 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 		else
 			return VSA_FAIL;
 	}
-	else
-		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+//	else
+//		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
@@ -653,8 +653,8 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr)
 
 		return virtualSliceAddr;
 	}
-	else
-		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
+//	else
+//		assert(!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
 
