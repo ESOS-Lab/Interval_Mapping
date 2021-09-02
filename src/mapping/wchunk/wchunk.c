@@ -99,7 +99,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     // XTime_GetTime(&findTime);
 
     // xil_printf("here3\n");
-    if (bypassAlexFind || it.cur_leaf_ == nullptr) {
+    if (bypassAlexFind || it.cur_leaf_ == nullptr || !it.payload()) {
         if (!isAllocate) return -1;
 
         // allocate new chunk
@@ -328,6 +328,7 @@ int wchunk_remove_range(WChunkBucket *wchunkBucket,
 
 WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
     // WChunk_p chunkp = (WChunk_p)ftableMemPool;
+    alex::Alex<unsigned int, WChunk_p>::Iterator it;
     WChunk_p chunkp = (WChunk_p)allocator.allocate(1);
     // ftableMemPool += sizeof(WChunk);
 
@@ -344,7 +345,9 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
     memset(&chunkp->validBits, 0,
            sizeof(unsigned int) * WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH));
 
-    wchunktree.insert(chunkStartAddr, chunkp);
+    it = wchunktree.find(chunkStartAddr);
+    if (it.cur_leaf_ == nullptr) wchunktree.insert(chunkStartAddr, chunkp);
+    else it.payload() = chunkp;
 
     // wchunk_print_alex_stats();
 
@@ -360,7 +363,10 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
 
 void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
                        unsigned int chunkStartAddr) {
-    wchunktree.erase(chunkStartAddr);
+    alex::Alex<unsigned int, WChunk_p>::Iterator it;
+
+    it = wchunktree.find(chunkStartAddr);
+    if (it.cur_leaf_ != nullptr) it.payload() = 0;
     allocator.deallocate(wchunk_p, 1);
 
     // xil_printf("wchunk deallocating chunk@%p, with startAddr=%p\n", wchunk_p,
@@ -481,8 +487,8 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
 }
 
 int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
-                               unsigned int logicalSliceAddr, int isValid,
-                               int start, int end) {
+                              unsigned int logicalSliceAddr, int isValid,
+                              int start, int end) {
     unsigned int selectedChunkStartAddr, indexInChunk;
     WChunkCache *ccache;
     WChunk_p selectedChunk;
@@ -515,7 +521,6 @@ int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
 
     wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
                       selectedChunkStartAddr, isValid, bitsInSlice);
-
 
     // return 1 if the entry is totally invalidated, else 0
     return !wchunk_is_valid(ccache, selectedChunk, indexInChunk);
