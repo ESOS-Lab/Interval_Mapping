@@ -11,7 +11,7 @@
 #include "../../address_translation.h"
 #include "../../alex/alex.h"
 
-#define WCHUNK_USE_LAST_SLOT 0
+#define WCHUNK_USE_LAST_SLOT 1
 
 #define WCHUNK_LENGTH_DIGIT 14
 #define WCHUNK_BUCKET_DIGIT 4
