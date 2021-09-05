@@ -23,6 +23,7 @@ char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 WChunkBucket *wchunkBucket;
 WChunkTree wchunktree;
 OpenSSDAllocator<WChunk> allocator = OpenSSDAllocator<WChunk>();
+OpenSSDAllocator<WChunkPiece> pieceAllocator = OpenSSDAllocator<WChunkPiece>();
 WChunkEraseList wchunkEraseList;
 
 int wchunk_get_lru_slot(WChunkCache *ccache);
@@ -186,9 +187,12 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
-    if (!wchunk_is_valid(ccache, selectedChunk, indexInChunk)) return VSA_FAIL;
-
-    virtualSliceAddr = selectedChunk->entries[indexInChunk].virtualSliceAddr;
+    //    if (!wchunk_is_valid(ccache, selectedChunk, indexInChunk)) return
+    //    VSA_FAIL;
+    //
+    //    virtualSliceAddr =
+    //    selectedChunk->entries[indexInChunk].virtualSliceAddr;
+    virtualSliceAddr = wchunk_entry_from_index(selectedChunk, indexInChunk);
 
     return virtualSliceAddr;
 }
@@ -223,7 +227,9 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
-    selectedChunk->entries[indexInChunk].virtualSliceAddr = virtualSliceAddr;
+    wchunk_set_entry_from_index(selectedChunk, indexInChunk, virtualSliceAddr);
+    //    selectedChunk->entries[indexInChunk].virtualSliceAddr =
+    //    virtualSliceAddr;
     // if (virtualSliceAddr == VSA_NONE)
     // XTime_GetTime(&midTime);
 
@@ -304,8 +310,8 @@ int wchunk_set_range(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
-    memset(selectedChunk->entries, virtualSliceAddr,
-           length * sizeof(logicalSliceAddr));
+    //    memset(selectedChunk->entries, virtualSliceAddr,
+    //           length * sizeof(logicalSliceAddr));
 
     if (virtualSliceAddr != VSA_NONE)
         wchunk_mark_valid(ccache, selectedChunk, indexInChunk, length,
@@ -330,24 +336,18 @@ WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr) {
     // WChunk_p chunkp = (WChunk_p)ftableMemPool;
     alex::Alex<unsigned int, WChunk_p>::Iterator it;
     WChunk_p chunkp = (WChunk_p)allocator.allocate(1);
-    // ftableMemPool += sizeof(WChunk);
+    chunkp->numOfValidBits = 0;
+    WChunkPiece *pieces = wchunk_allocate_piece_whole_chunk(chunkp);
 
-    memset(&chunkp->entries, VSA_NONE,
-           sizeof(LOGICAL_SLICE_ENTRY) * WCHUNK_LENGTH);
-
-    // for (int i = 0; i < WCHUNK_LENGTH; i++) {
-    //     if (chunkp->entries[i].virtualSliceAddr != VSA_NONE)
-    //         xil_printf("wchunk allocate error %d\n", i);
+    // for (int i = 0; i < WCHUNK_PIECE_COUNT_IN_CHUNK; i++) {
+    //     chunk_p->pieces[i] = pieces[i];
     // }
 
-    // init valid bits
-    chunkp->numOfValidBits = 0;
-    memset(&chunkp->validBits, 0,
-           sizeof(unsigned int) * WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH));
-
     it = wchunktree.find(chunkStartAddr);
-    if (it.cur_leaf_ == nullptr) wchunktree.insert(chunkStartAddr, chunkp);
-    else it.payload() = chunkp;
+    if (it.cur_leaf_ == nullptr)
+        wchunktree.insert(chunkStartAddr, chunkp);
+    else
+        it.payload() = chunkp;
 
     // wchunk_print_alex_stats();
 
@@ -425,12 +425,10 @@ void wchunk_print_alex_stats() {
 
 int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                     unsigned int indexInChunk) {
-    int validBitIndex, validBitSelector;
-    validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk);
-    validBitSelector =
+    int validBitSelector =
         WCHUNK_VALID_BIT_SELECTOR(indexInChunk, WCHUNK_FULL_BITS_IN_SLICE);
 
-    return wchunk_p->validBits[validBitIndex] & validBitSelector;
+    return wchunk_get_valid_bits(wchunk_p, indexInChunk) & validBitSelector;
 }
 
 void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
@@ -439,11 +437,10 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                        int bitsInSlice) {
     int validBitIndex, validBitSelector, origBits, newBits, numBits = 0;
     for (int i = 0; i < length; i++) {
-        validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk + i);
         validBitSelector =
             WCHUNK_VALID_BIT_SELECTOR(indexInChunk + i, bitsInSlice);
 
-        origBits = wchunk_p->validBits[validBitIndex];
+        origBits = wchunk_get_valid_bits(wchunk_p, indexInChunk + i);
 
         if (isValid) {
             // if original value was already on, just return
@@ -467,9 +464,7 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
             //                wchunkStartAddr, wchunk_p->numOfValidBits);
             //            }
         }
-        wchunk_p->numOfValidBits +=
-            __builtin_popcountl(newBits) - __builtin_popcountl(origBits);
-        wchunk_p->validBits[validBitIndex] = newBits;
+        wchunk_set_valid_bits(wchunk_p, indexInChunk + i, newBits);
     }
 
     // if (!isValid && wchunk_p->numOfValidBits % 1000 == 0) {
