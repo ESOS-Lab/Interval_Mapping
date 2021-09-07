@@ -183,7 +183,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 
 		// TODO: convert to 64-bit LBA
 		// invalidate slice
-		while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
+		while (tempLsa * NVME_BLOCKS_PER_SLICE + 3 < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
 			InvalidateOldVsa(tempLsa);
 			tempLsa++;
 		}
