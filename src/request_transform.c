@@ -227,7 +227,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		// xil_printf("HandlingDSM: start=%d, length=%d\n",
 			// dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
 		// InvalidateOldVsaAll(tempLsa, tempLen);
-		while (tempLsa * NVME_BLOCKS_PER_SLICE < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
+		while (tempLsa * NVME_BLOCKS_PER_SLICE + 3 < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
 			InvalidateOldVsa(tempLsa);
 			tempLsa++;
 		}

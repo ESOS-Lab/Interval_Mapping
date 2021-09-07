@@ -103,7 +103,7 @@ inline unsigned int wchunk_entry_from_index(WChunk_p wchunk_p,
     WChunkPiece *piece = wchunk_p->pieces[WCHUNK_PIECE_IDX(indexInChunk)];
     int validBitIndex =
         WCHUNK_VALID_BIT_INDEX(WCHUNK_IDX_IN_PIECE(indexInChunk));
-    if (piece == NULL || !piece->validBits[validBitIndex])
+    if (piece == NULL)
         return VSA_NONE;
     return piece->entries[WCHUNK_IDX_IN_PIECE(indexInChunk)].virtualSliceAddr;
 }
