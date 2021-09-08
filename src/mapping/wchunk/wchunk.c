@@ -425,8 +425,8 @@ void wchunk_print_alex_stats() {
 
 int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                     unsigned int indexInChunk) {
-    int validBitSelector =
-        WCHUNK_VALID_BIT_SELECTOR(indexInChunk, WCHUNK_FULL_BITS_IN_SLICE);
+    int validBitSelector = WCHUNK_VALID_BIT_SELECTOR(
+        WCHUNK_IDX_IN_PIECE(indexInChunk), WCHUNK_FULL_BITS_IN_SLICE);
 
     return wchunk_get_valid_bits(wchunk_p, indexInChunk) & validBitSelector;
 }
@@ -437,8 +437,8 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
                        int bitsInSlice) {
     int validBitIndex, validBitSelector, origBits, newBits, numBits = 0;
     for (int i = 0; i < length; i++) {
-        validBitSelector =
-            WCHUNK_VALID_BIT_SELECTOR(indexInChunk + i, bitsInSlice);
+        validBitSelector = WCHUNK_VALID_BIT_SELECTOR(
+            WCHUNK_IDX_IN_PIECE(indexInChunk + i), bitsInSlice);
 
         origBits = wchunk_get_valid_bits(wchunk_p, indexInChunk + i);
 
