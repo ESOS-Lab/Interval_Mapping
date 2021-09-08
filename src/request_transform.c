@@ -177,7 +177,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 								unsigned int dsmAddrH,
                                 unsigned int dsmAddrL,
                                 int isDeallocate) {
-    unsigned int reqSlotTag, tempLsa, dsmOffset, tempLen;
+    unsigned int reqSlotTag, tempLsa, startLsa, startOffset, tempLen, endLsa, endOffset;
 	unsigned int rangeSize, devAddr;
 	int isInvalidated;
 	// XTime start, malloc, dma, memc, inv;
@@ -208,35 +208,49 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 
 	for (int i = 0; i < numRanges + 1; i++, dsmRange++) {
 		// TODO: convert to 64-bit LBA
-		tempLsa = dsmRange->startingLBA[0] / NVME_BLOCKS_PER_SLICE;
-		dsmOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
-
+		startLsa = dsmRange->startingLBA[0] / NVME_BLOCKS_PER_SLICE;
+		startOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
+		endLsa = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) / NVME_BLOCKS_PER_SLICE;
+		endOffset = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) % NVME_BLOCKS_PER_SLICE;
+			
 		// TODO: handle offsetted Slices
-		
-		if (dsmOffset > 0) {
-			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, dsmOffset, NVME_BLOCKS_PER_SLICE);
-			if (isInvalidated) { 
-				InvalidateOldVsa(tempLsa);
+		if (startLsa == endLsa) {
+			// only in a single slice
+			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, startLsa, 0, startOffset, endOffset);
+			if (isInvalidated) {
+				InvalidateOldVsa(startLsa);
 			}
-			tempLsa++;
-			dsmOffset = 0;
+			continue;
 		}
+
 		
+		if (startOffset > 0) {
+			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, startLsa, 0, startOffset, NVME_BLOCKS_PER_SLICE);
+			if (isInvalidated) {
+				InvalidateOldVsa(startLsa);
+			}
+		}
+
 		// TODO: convert to 64-bit LBA
 		// invalidate slice
 		// xil_printf("HandlingDSM: start=%d, length=%d\n",
 			// dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
 		// InvalidateOldVsaAll(tempLsa, tempLen);
-		while (tempLsa * NVME_BLOCKS_PER_SLICE + 3 < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
+		for (tempLsa = startLsa + 1; tempLsa < endLsa; tempLsa++) {
+		// tempLsa = startLsa + 1;
+		// while (tempLsa * NVME_BLOCKS_PER_SLICE + 3 < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
 			InvalidateOldVsa(tempLsa);
-			tempLsa++;
+			// tempLsa++;
 		}
-		
-		dsmOffset = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) % NVME_BLOCKS_PER_SLICE;
-		if (dsmOffset > 0) {
-			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, tempLsa, 0, 0, dsmOffset);
+
+		// unsigned int oldTempLsa = tempLsa;
+		// tempLsa = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) / NVME_BLOCKS_PER_SLICE;
+		// if (oldTempLsa != tempLsa) xil_printf("lsa is differenct, %p, %p\n", oldTempLsa, tempLsa);
+		if (endOffset > 0) {
+			isInvalidated = wchunk_mark_valid_partial(wchunkBucket, endLsa, 0, 0, endOffset);
 			if (isInvalidated) {
-				InvalidateOldVsa(tempLsa);
+				if(tempLsa != endLsa) xil_printf("dif %p, %p\n", tempLsa, endLsa);
+				InvalidateOldVsa(endLsa);
 			}
 		}
 	}
