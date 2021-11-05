@@ -922,8 +922,8 @@ void InvalidateOldVsaAll(unsigned int logicalSliceAddr, int length) {
 		} else
 			is_success = 0;
 	}
-	if (is_success)
-		wchunk_remove_range(wchunkBucket, logicalSliceAddr, length);
+	// if (is_success)
+	// 	wchunk_remove_range(wchunkBucket, logicalSliceAddr, length);
 }
 
 void EraseBlock(unsigned int dieNo, unsigned int blockNo) {
