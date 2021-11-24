@@ -17,6 +17,9 @@
 #define SIZE_DATA_NODE             \
     (SLICES_ZONE / SIZE_TEMP_NODE / \
      (WCHUNK_LENGTH))
+    
+#define FUNCTIONAL_MAPPING_TREE_COUNT 8
+#define LSA_TO_TREE_NUM(lsa) ((lsa >> 27) & 7)
 
 #define POSITION_LESS (-1)
 #define POSITION_LARGER

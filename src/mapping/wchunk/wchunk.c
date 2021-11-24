@@ -23,7 +23,7 @@ char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 // WChunkCache *ccache;
 WChunkBucket *wchunkBucket;
 WChunkEraseList wchunkEraseList;
-FunctionalMappingTree fmTree;
+FunctionalMappingTree fmTrees[FUNCTIONAL_MAPPING_TREE_COUNT];
 OpenSSDAllocator<TempNode> tAllocator;
 OpenSSDAllocator<WChunk> cAllocator;
 
@@ -50,7 +50,9 @@ void wchunk_init() {
 #endif
     }
 
-    initRootNode(&fmTree.rootNode, 0);
+    for (int i = 0; i < FUNCTIONAL_MAPPING_TREE_COUNT; i++) {
+        initRootNode(&fmTrees[i].rootNode, 0);
+    }
 }
 
 // XTime lastReportTime;
@@ -65,6 +67,8 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate) {
     XTime startTime, cacheLoopTime, findTime, allocateTime, lruTime;
     int selectedSlot, bypassAlexFind = 0;
+    int tree_num;
+    FunctionalMappingTree *fmTree;
     WChunk_p selectedChunk = NULL;
     // alex::Alex<unsigned int, WChunk_p>::Iterator it;
 
@@ -113,7 +117,10 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     // }
     // XTime_GetTime(&allocateTime);
 
-    selectedChunk = fetchChunkFromFmTree(&fmTree, logicalSliceAddr, isAllocate);
+    tree_num = LSA_TO_TREE_NUM(logicalSliceAddr);
+//    xil_printf("lsa: %p, tree_num: %d\n", logicalSliceAddr, tree_num);
+    fmTree = &fmTrees[LSA_TO_TREE_NUM(logicalSliceAddr)];
+    selectedChunk = fetchChunkFromFmTree(fmTree, logicalSliceAddr, isAllocate);
     if (selectedChunk == NULL) return -1;
 
     // if chunk is found, find a slot
