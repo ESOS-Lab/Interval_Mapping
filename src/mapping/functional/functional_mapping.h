@@ -20,13 +20,14 @@
     
 #define FUNCTIONAL_MAPPING_TREE_COUNT 8
 #define LSA_TO_TREE_NUM(lsa) ((lsa >> 27) & 7)
+#define TREE_NUM_TO_FIRST_LSA(num) (num << 27)
 
 #define POSITION_LESS (-1)
 #define POSITION_LARGER
 
 typedef struct node_model {
     unsigned int invSlope;
-    float bias;
+    unsigned int bias;
 } NodeModel;
 
 int calcPosition(NodeModel model, unsigned int logicalSliceAddr) {
@@ -47,36 +48,35 @@ typedef struct temp_node {
 
 typedef struct root_node {
     NodeModel model;
-    int size;                  // expandable
-    TempNode *childTempNodes[64];  // temporary static allocation.
+    int size;                       // expandable
+    TempNode *childTempNodes[128];  // temporary static allocation.
 } RootNode;
 
 typedef struct functional_mapping_tree {
     RootNode rootNode;
 } FunctionalMappingTree;
 
-extern FunctionalMappingTree fmTree;
+extern FunctionalMappingTree fmTrees[FUNCTIONAL_MAPPING_TREE_COUNT];
 extern OpenSSDAllocator<TempNode> tAllocator;
 extern OpenSSDAllocator<WChunk> cAllocator;
 
 inline void initDataNode(DataNode *node, unsigned int firstItemAddr) {
 	node->size = SIZE_DATA_NODE;
     node->model.invSlope = WCHUNK_LENGTH;
-    node->model.bias = (float)firstItemAddr;
-    memset(node->childChunks, 0,
-           sizeof(WChunk*) * SIZE_DATA_NODE);
+    node->model.bias = firstItemAddr;
+    memset(node->childChunks, 0, sizeof(WChunk *) * SIZE_DATA_NODE);
 }
 
 inline void initRootNode(RootNode *node, unsigned int firstItemAddr) {
 	node->size = 0;
     node->model.invSlope = SIZE_TEMP_NODE * SIZE_DATA_NODE * WCHUNK_LENGTH;
-    node->model.bias = (float)firstItemAddr;
+    node->model.bias = firstItemAddr;
 }
 
 inline void initTempNode(TempNode *node, unsigned int firstItemAddr) {
 	node->size = SIZE_TEMP_NODE;
     node->model.invSlope = SIZE_DATA_NODE * WCHUNK_LENGTH;
-    node->model.bias = (float)firstItemAddr;
+    node->model.bias = firstItemAddr;
 
     unsigned int tempNodeAddr = node->model.bias;
     for (int i = 0; i < node->size; i++) {

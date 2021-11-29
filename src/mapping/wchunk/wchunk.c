@@ -53,7 +53,10 @@ void wchunk_init() {
     }
 
     for (int i = 0; i < FUNCTIONAL_MAPPING_TREE_COUNT; i++) {
-        initRootNode(&fmTrees[i].rootNode, 0);
+        initRootNode(&(fmTrees[i].rootNode), TREE_NUM_TO_FIRST_LSA(i));
+        fetchChunkFromFmTree(&fmTrees[i], TREE_NUM_TO_FIRST_LSA(i), 1);
+        xil_printf("FmTree %d init: %p\n", i, TREE_NUM_TO_FIRST_LSA(i));
+
         isFmTreesInitialized[i] = 0;
     }
 }
