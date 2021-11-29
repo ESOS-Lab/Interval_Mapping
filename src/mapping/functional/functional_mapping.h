@@ -14,10 +14,8 @@
 #define SLICES_ZONE (20 * (1 << 16))
 #define SIZE_TEMP_NODE (1 << 4)
 // remainder value to match zone size
-#define SIZE_DATA_NODE             \
-    (SLICES_ZONE / SIZE_TEMP_NODE / \
-     (WCHUNK_LENGTH))
-    
+#define SIZE_DATA_NODE (SLICES_ZONE / SIZE_TEMP_NODE / (WCHUNK_LENGTH))
+
 #define FUNCTIONAL_MAPPING_TREE_COUNT 8
 #define LSA_TO_TREE_NUM(lsa) ((lsa >> 27) & 7)
 #define TREE_NUM_TO_FIRST_LSA(num) (num << 27)
@@ -61,20 +59,20 @@ extern OpenSSDAllocator<TempNode> tAllocator;
 extern OpenSSDAllocator<WChunk> cAllocator;
 
 inline void initDataNode(DataNode *node, unsigned int firstItemAddr) {
-	node->size = SIZE_DATA_NODE;
+    node->size = SIZE_DATA_NODE;
     node->model.invSlope = WCHUNK_LENGTH;
     node->model.bias = firstItemAddr;
     memset(node->childChunks, 0, sizeof(WChunk *) * SIZE_DATA_NODE);
 }
 
 inline void initRootNode(RootNode *node, unsigned int firstItemAddr) {
-	node->size = 0;
+    node->size = 0;
     node->model.invSlope = SIZE_TEMP_NODE * SIZE_DATA_NODE * WCHUNK_LENGTH;
     node->model.bias = firstItemAddr;
 }
 
 inline void initTempNode(TempNode *node, unsigned int firstItemAddr) {
-	node->size = SIZE_TEMP_NODE;
+    node->size = SIZE_TEMP_NODE;
     node->model.invSlope = SIZE_DATA_NODE * WCHUNK_LENGTH;
     node->model.bias = firstItemAddr;
 
@@ -86,8 +84,11 @@ inline void initTempNode(TempNode *node, unsigned int firstItemAddr) {
 }
 
 inline int expandRootNode(RootNode *node, unsigned int targetAddr) {
-//	xil_printf("expantRoot %p\n", targetAddr);
+    //	xil_printf("expantRoot %p\n", targetAddr);
     size_t targetItemIndex = calcPosition(node->model, targetAddr);
+
+    // xil_printf("expantRoot %p, targetIdx %d, rootBias %p\n", targetAddr,
+    //            targetItemIndex, node->model.bias);
     node->size = targetItemIndex + 1;
     // expand temp node
     // for now, use static
@@ -109,23 +110,27 @@ inline TempNode *fetchTempNodeFromRootNode(RootNode *node,
                                            unsigned int logicalSliceAddr,
                                            int isAllocate) {
     int position = calcPosition(node->model, logicalSliceAddr);
-//    xil_printf("fetchRoot, addr=%p, position=%p, isAllocate=%d\n", logicalSliceAddr, position, isAllocate);
+    //    xil_printf("fetchRoot, addr=%p, position=%p, isAllocate=%d\n",
+    //    logicalSliceAddr, position, isAllocate);
     if (position < 0) return NULL;
     if (position >= node->size) {
         if (!isAllocate) return NULL;
         position = expandRootNode(node, logicalSliceAddr);
     }
 
-//    xil_printf("fetchRoot yes, addr=%p, temp=%p\n", logicalSliceAddr, node->childTempNodes[position]);
+    //    xil_printf("fetchRoot yes, addr=%p, temp=%p\n", logicalSliceAddr,
+    //    node->childTempNodes[position]);
 
     return node->childTempNodes[position];
 }
 inline DataNode *fetchDataNodeFromTempNode(TempNode *node,
                                            unsigned int logicalSliceAddr) {
     int position = calcPosition(node->model, logicalSliceAddr);
-//    xil_printf("fetchTemp, addr=%p, position=%p, nodesize=%d\n", logicalSliceAddr, position, node->size);
+    //    xil_printf("fetchTemp, addr=%p, position=%p, nodesize=%d\n",
+    //    logicalSliceAddr, position, node->size);
     if (position < 0 || position >= node->size) return NULL;
-//    xil_printf("fetchTemp yes, addr=%p, data=%p\n", logicalSliceAddr, &node->childDataNodes[position]);
+    //    xil_printf("fetchTemp yes, addr=%p, data=%p\n", logicalSliceAddr,
+    //    &node->childDataNodes[position]);
     return &node->childDataNodes[position];
 }
 
@@ -133,7 +138,8 @@ inline WChunk *fetchChunkFromDataNode(DataNode *node,
                                       unsigned int logicalSliceAddr,
                                       int isAllocate) {
     int position = calcPosition(node->model, logicalSliceAddr);
-//    xil_printf("fetchData, addr=%p, position=%p, nodesize=%d\n", logicalSliceAddr, position, node->size);
+    //    xil_printf("fetchData, addr=%p, position=%p, nodesize=%d\n",
+    //    logicalSliceAddr, position, node->size);
     if (position < 0 || position >= node->size) return NULL;
     WChunk *c = node->childChunks[position];
     if (c == NULL && isAllocate) {
@@ -145,7 +151,7 @@ inline WChunk *fetchChunkFromDataNode(DataNode *node,
         memset(&c->validBits, 0,
                sizeof(unsigned int) * WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH));
     }
-//    xil_printf("fetchData yes, addr=%p, chunk=%p\n", logicalSliceAddr, c);
+    //    xil_printf("fetchData yes, addr=%p, chunk=%p\n", logicalSliceAddr, c);
     return c;
 }
 
