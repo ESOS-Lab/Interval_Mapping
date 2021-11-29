@@ -27,6 +27,8 @@ FunctionalMappingTree fmTrees[FUNCTIONAL_MAPPING_TREE_COUNT];
 OpenSSDAllocator<TempNode> tAllocator;
 OpenSSDAllocator<WChunk> cAllocator;
 
+int isFmTreesInitialized[FUNCTIONAL_MAPPING_TREE_COUNT];
+
 int wchunk_get_lru_slot(WChunkCache *ccache);
 void wchunk_mark_mru(WChunkCache *ccache, int slot);
 int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
@@ -52,6 +54,7 @@ void wchunk_init() {
 
     for (int i = 0; i < FUNCTIONAL_MAPPING_TREE_COUNT; i++) {
         initRootNode(&fmTrees[i].rootNode, 0);
+        isFmTreesInitialized[i] = 0;
     }
 }
 
@@ -120,6 +123,10 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     tree_num = LSA_TO_TREE_NUM(logicalSliceAddr);
 //    xil_printf("lsa: %p, tree_num: %d\n", logicalSliceAddr, tree_num);
     fmTree = &fmTrees[LSA_TO_TREE_NUM(logicalSliceAddr)];
+    if (isFmTreesInitialized[LSA_TO_TREE_NUM(logicalSliceAddr)] == 0) {
+        isFmTreesInitialized[LSA_TO_TREE_NUM(logicalSliceAddr)] = 1;
+        xil_printf("FmTree %d first access: %p\n", LSA_TO_TREE_NUM(logicalSliceAddr), logicalSliceAddr);
+    }
     selectedChunk = fetchChunkFromFmTree(fmTree, logicalSliceAddr, isAllocate);
     if (selectedChunk == NULL) return -1;
 
