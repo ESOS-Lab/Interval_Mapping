@@ -48,6 +48,8 @@
 #include <assert.h>
 #include "memory_map.h"
 #include "xil_printf.h"
+#include <xtime_l.h>
+#include <stdio.h>
 
 P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
@@ -621,14 +623,38 @@ void InitBlockDieMap()
 	InitCurrentBlockOfDieMap();
 }
 
+XTime lastReportTime;
+int calls = 0;
+XTime totalGetTime;
+int OSSD_TICK_PER_SEC = 500000000;
+
 unsigned int AddrTransRead(unsigned int logicalSliceAddr)
 {
 	unsigned int virtualSliceAddr;
-
+	XTime startTime, getTime;
 	if(logicalSliceAddr < SLICES_PER_SSD)
 	{
+		XTime_GetTime(&startTime);
 		virtualSliceAddr = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
+        XTime_GetTime(&getTime);
+		
+		totalGetTime += (getTime - startTime);
+    	calls++;
 
+		if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+			char reportString[1024];
+			sprintf(
+				reportString,
+				"sec %f reporting calls: %d avg_getTime: %f \n",
+				1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
+				1.0 * totalGetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
+			xil_printf("%s", reportString);
+
+			lastReportTime = startTime;
+			calls = 0;
+			totalGetTime = 0;
+		}
+		
 		if(virtualSliceAddr != VSA_NONE)
 			return virtualSliceAddr;
 		else
