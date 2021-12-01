@@ -11,7 +11,7 @@
 #include "../../alex/openssd_allocator.h"
 #include "../wchunk/wchunk.h"
 
-#define SLICES_ZONE (20 * (1 << 16))
+#define SLICES_ZONE (16 * (1 << 16))
 #define SIZE_TEMP_NODE (1 << 4)
 // remainder value to match zone size
 #define SIZE_DATA_NODE (SLICES_ZONE / SIZE_TEMP_NODE / (WCHUNK_LENGTH))
