@@ -68,10 +68,16 @@ void InitGcVictimMap()
 	}
 }
 
+int isGCRan = 0;
 
 void GarbageCollection(unsigned int dieNo)
 {
 	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag;
+
+	if (!isGCRan) {
+		isGCRan = 1;
+		xil_printf("GC has just started %d\n", dieNo);
+	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
 	dieNoForGcCopy = dieNo;
