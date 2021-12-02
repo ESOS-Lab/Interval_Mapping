@@ -171,7 +171,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 //XTime totalDmaTime = 0;
 //XTime totalMemcpyTime = 0;
 //XTime totalInvTime = 0;
-//int OSSD_TICK_PER_SEC = 500000000;
+// int OSSD_TICK_PER_SEC = 500000000;
 void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
                                 unsigned int numRanges, 
 								unsigned int dsmAddrH,
@@ -181,8 +181,9 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 	unsigned int rangeSize, devAddr;
 	int isInvalidated;
 	// XTime start, malloc, dma, memc, inv;
+	XTime start;
 
-	// XTime_GetTime(&start);
+	XTime_GetTime(&start);
 
 	// if (!smalloc_curr_pool.pool) {
 	// 	size_t size = (size_t)allocator_end_addr - (size_t)allocator_start_addr;
@@ -212,6 +213,11 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		startOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
 		endLsa = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) / NVME_BLOCKS_PER_SLICE;
 		endOffset = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) % NVME_BLOCKS_PER_SLICE;
+
+		char reportString[1024];
+		sprintf(reportString, "[%f, %u, %d]\n", 1.0 * start / (500000000),
+			dsmRange->startingLBA[0], dsmRange->lengthInLogicalBlocks);
+		xil_printf("%s", reportString);
 			
 		// TODO: handle offsetted Slices
 		if (startLsa == endLsa) {
