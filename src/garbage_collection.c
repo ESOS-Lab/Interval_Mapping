@@ -125,7 +125,7 @@ void GarbageCollection(unsigned int dieNo)
 					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = FindFreeVirtualSliceForGc(dieNoForGcCopy, victimBlockNo);
 
 					// TODO: update
-					wchunk_set(wchunkBucket, logicalSliceAddr, virtualSliceAddr);
+					wchunk_set(wchunkBucket, logicalSliceAddr, reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr);
 //					fhm_update(logicalSliceAddr, virtualSliceAddr);
 //					*logicalSlice.get_payload(logicalSliceAddr) = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
 //					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
