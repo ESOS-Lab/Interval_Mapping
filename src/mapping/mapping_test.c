@@ -7,7 +7,7 @@
 
 #include <assert.h>
 
-#include "wchunk/wchunk.h"
+#include "mapseg/map_segment.h"
 
 // alex::Alex<unsigned int, unsigned int> testHotmap;
 int testCurMaxFtableIdx = -1;
@@ -22,10 +22,10 @@ void test_ftable() {
     xil_printf("Starting ftable test...\n");
 
 //    WChunkCache ccache;
-//    wchunk_init(&ccache);
+//    mapseg_init(&ccache);
 //    for(int i = 0; i< 30*FTABLE_DEFAULT_CHUNK_SIZE; i++){
-//        int isSetSuccess = wchunk_set(&ccache, i, i+1);
-//        unsigned int out = wchunk_get(&ccache, i);
+//        int isSetSuccess = mapseg_set(&ccache, i, i+1);
+//        unsigned int out = mapseg_get(&ccache, i);
 ////        xil_printf("set success is %d, out is %d\n",isSetSuccess, out);
 //    }
 

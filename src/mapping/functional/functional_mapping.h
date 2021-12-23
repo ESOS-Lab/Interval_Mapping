@@ -9,12 +9,12 @@
 #define SRC_MAPPING_FUNCTIONAL_FUNCTIONAL_MAPPING_H_
 
 #include "../../alex/openssd_allocator.h"
-#include "../wchunk/wchunk.h"
+#include "../mapseg/map_segment.h"
 
 #define SLICES_ZONE (16 * (1 << 16))
 #define SIZE_TEMP_NODE (1 << 4)
 // remainder value to match zone size
-#define SIZE_DATA_NODE (SLICES_ZONE / SIZE_TEMP_NODE / (WCHUNK_LENGTH))
+#define SIZE_DATA_NODE (SLICES_ZONE / SIZE_TEMP_NODE / (MAPSEG_UNIT_RANGE_SIZE))
 
 #define FUNCTIONAL_MAPPING_TREE_COUNT 8
 #define LSA_TO_TREE_NUM(lsa) ((lsa >> 27) & 7)
@@ -35,7 +35,7 @@ int calcPosition(NodeModel model, unsigned int logicalSliceAddr) {
 typedef struct data_node {
     NodeModel model;
     int size;
-    WChunk *childChunks[SIZE_DATA_NODE];  // aka map segment
+    MapSegment *childChunks[SIZE_DATA_NODE];  // aka map segment
 } DataNode;
 
 typedef struct temp_node {
@@ -56,24 +56,24 @@ typedef struct functional_mapping_tree {
 
 extern FunctionalMappingTree fmTrees[FUNCTIONAL_MAPPING_TREE_COUNT];
 extern OpenSSDAllocator<TempNode> tAllocator;
-extern OpenSSDAllocator<WChunk> cAllocator;
+extern OpenSSDAllocator<MapSegment> cAllocator;
 
 inline void initDataNode(DataNode *node, unsigned int firstItemAddr) {
     node->size = SIZE_DATA_NODE;
-    node->model.invSlope = WCHUNK_LENGTH;
+    node->model.invSlope = MAPSEG_UNIT_RANGE_SIZE;
     node->model.bias = firstItemAddr;
-    memset(node->childChunks, 0, sizeof(WChunk *) * SIZE_DATA_NODE);
+    memset(node->childChunks, 0, sizeof(MapSegment *) * SIZE_DATA_NODE);
 }
 
 inline void initRootNode(RootNode *node, unsigned int firstItemAddr) {
     node->size = 0;
-    node->model.invSlope = SIZE_TEMP_NODE * SIZE_DATA_NODE * WCHUNK_LENGTH;
+    node->model.invSlope = SIZE_TEMP_NODE * SIZE_DATA_NODE * MAPSEG_UNIT_RANGE_SIZE;
     node->model.bias = firstItemAddr;
 }
 
 inline void initTempNode(TempNode *node, unsigned int firstItemAddr) {
     node->size = SIZE_TEMP_NODE;
-    node->model.invSlope = SIZE_DATA_NODE * WCHUNK_LENGTH;
+    node->model.invSlope = SIZE_DATA_NODE * MAPSEG_UNIT_RANGE_SIZE;
     node->model.bias = firstItemAddr;
 
     unsigned int tempNodeAddr = node->model.bias;
@@ -134,28 +134,28 @@ inline DataNode *fetchDataNodeFromTempNode(TempNode *node,
     return &node->childDataNodes[position];
 }
 
-inline WChunk *fetchChunkFromDataNode(DataNode *node,
+inline MapSegment *fetchChunkFromDataNode(DataNode *node,
                                       unsigned int logicalSliceAddr,
                                       int isAllocate) {
     int position = calcPosition(node->model, logicalSliceAddr);
     //    xil_printf("fetchData, addr=%p, position=%p, nodesize=%d\n",
     //    logicalSliceAddr, position, node->size);
     if (position < 0 || position >= node->size) return NULL;
-    WChunk *c = node->childChunks[position];
+    MapSegment *c = node->childChunks[position];
     if (c == NULL && isAllocate) {
         c = cAllocator.allocate(1);
         node->childChunks[position] = c;
         memset(&c->entries, VSA_NONE,
-               sizeof(LOGICAL_SLICE_ENTRY) * WCHUNK_LENGTH);
-        c->numOfValidBits = 0;
+               sizeof(LOGICAL_SLICE_ENTRY) * MAPSEG_UNIT_RANGE_SIZE);
+        c->numOfValidMaps = 0;
         memset(&c->validBits, 0,
-               sizeof(unsigned int) * WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH));
+               sizeof(unsigned int) * MAPSEG_VALID_BIT_INDEX(MAPSEG_UNIT_RANGE_SIZE));
     }
     //    xil_printf("fetchData yes, addr=%p, chunk=%p\n", logicalSliceAddr, c);
     return c;
 }
 
-inline WChunk *fetchChunkFromFmTree(FunctionalMappingTree *fmTree,
+inline MapSegment *fetchChunkFromFmTree(FunctionalMappingTree *fmTree,
                                     unsigned int logicalSliceAddr,
                                     int isAllocateChunk) {
     TempNode *t = fetchTempNodeFromRootNode(&fmTree->rootNode, logicalSliceAddr,
@@ -163,7 +163,7 @@ inline WChunk *fetchChunkFromFmTree(FunctionalMappingTree *fmTree,
     if (t == NULL) return NULL;
     DataNode *d = fetchDataNodeFromTempNode(t, logicalSliceAddr);
     if (d == NULL) return NULL;
-    WChunk *c = fetchChunkFromDataNode(d, logicalSliceAddr, isAllocateChunk);
+    MapSegment *c = fetchChunkFromDataNode(d, logicalSliceAddr, isAllocateChunk);
     return c;
 }
 #endif /* SRC_MAPPING_FUNCTIONAL_FUNCTIONAL_MAPPING_H_ */

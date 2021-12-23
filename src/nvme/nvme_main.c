@@ -70,7 +70,7 @@
 #include "../request_allocation.h"
 
 #include "../memory_map.h"
-#include "../mapping/wchunk/wchunk.h"
+#include "../mapping/mapseg/map_segment.h"
 
 volatile NVME_CONTEXT g_nvmeTask;
 
@@ -185,7 +185,7 @@ void nvme_main()
 		{
 			CheckDoneNvmeDmaReq();
 			SchedulingNandReq();
-			// wchunk_handle_erase(wchunkBucket);
+			// mapseg_handle_erase(wchunkBucket);
 		}
 
 		// XTime_GetTime(&curTime);

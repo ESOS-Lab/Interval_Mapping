@@ -5,7 +5,7 @@
  *      Author: Minsu Jang (nobleminsu@gmail.com)
  */
 
-#include "wchunk.h"
+#include "map_segment.h"
 
 #include <assert.h>
 #include <string.h>
@@ -21,29 +21,29 @@
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
 // WChunkCache *ccache;
-WChunkBucket *wchunkBucket;
-WChunkEraseList wchunkEraseList;
+MapSegmentBucket *wchunkBucket;
+MapSegmentEraseList wchunkEraseList;
 FunctionalMappingTree fmTrees[FUNCTIONAL_MAPPING_TREE_COUNT];
 OpenSSDAllocator<TempNode> tAllocator;
-OpenSSDAllocator<WChunk> cAllocator;
+OpenSSDAllocator<MapSegment> cAllocator;
 
 int isFmTreesInitialized[FUNCTIONAL_MAPPING_TREE_COUNT];
 
-int wchunk_get_lru_slot(WChunkCache *ccache);
-void wchunk_mark_mru(WChunkCache *ccache, int slot);
-int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
+int wchunk_get_lru_slot(MapSegmentCache *ccache);
+void wchunk_mark_mru(MapSegmentCache *ccache, int slot);
+int wchunk_select_chunk(MapSegmentCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate);
-WChunk_p wchunk_allocate_new(WChunkCache *ccache, unsigned int chunkStartAddr);
+MapSegment_p wchunk_allocate_new(MapSegmentCache *ccache, unsigned int chunkStartAddr);
 void wchunk_print_alex_stats();
 
-void wchunk_init() {
-    WChunkCache *ccache;
+void mapseg_init() {
+    MapSegmentCache *ccache;
 
-    OpenSSDAllocator<WChunkBucket> aa;
-    wchunkBucket = (WChunkBucket_p)aa.allocate(1);
+    OpenSSDAllocator<MapSegmentBucket> aa;
+    wchunkBucket = (MapSegmentBucket_p)aa.allocate(1);
 
-    for (int i = 0; i < WCHUNK_BUCKET_SIZE; i++) {
-        ccache = &wchunkBucket->ccaches[i];
+    for (int i = 0; i < MAPSEG_BUCKET_SIZE; i++) {
+        ccache = &wchunkBucket->mapSegmentCaches[i];
         ccache->curItemCount = 0;
         ccache->maxLruValue = 0;
 
@@ -69,17 +69,17 @@ void wchunk_init() {
 // XTime totalLruTime;
 // int OSSD_TICK_PER_SEC = 500000000;
 
-int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
+int wchunk_select_chunk(MapSegmentCache *ccache, unsigned int logicalSliceAddr,
                         int isAllocate) {
     XTime startTime, cacheLoopTime, findTime, allocateTime, lruTime;
     int selectedSlot, bypassAlexFind = 0;
     int tree_num;
     FunctionalMappingTree *fmTree;
-    WChunk_p selectedChunk = NULL;
+    MapSegment_p selectedChunk = NULL;
     // alex::Alex<unsigned int, WChunk_p>::Iterator it;
 
     unsigned int matchingChunkStartAddr =
-        logicalSliceAddr & WCHUNK_START_ADDR_MASK;
+        logicalSliceAddr & MAPSEG_START_ADDR_MASK;
 
 #if WCHUNK_USE_LAST_SLOT
     // select chunk
@@ -94,10 +94,10 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
 
     // XTime_GetTime(&startTime);
     for (int i = 0; i < ccache->curItemCount; i++) {
-        unsigned int chunkStartAddr = ccache->wchunkStartAddr[i];
+        unsigned int chunkStartAddr = ccache->mapSegmentStartAddr[i];
         // check if hit
         if (chunkStartAddr == matchingChunkStartAddr) {
-            selectedChunk = ccache->wchunk_p[i];
+            selectedChunk = ccache->mapSegment_p[i];
             selectedSlot = i;
             goto found;
         }
@@ -134,7 +134,7 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     if (selectedChunk == NULL) return -1;
 
     // if chunk is found, find a slot
-    if (ccache->curItemCount < WCHUNK_CACHE_SIZE) {
+    if (ccache->curItemCount < MAPSEG_CACHE_SIZE) {
         selectedSlot = ccache->curItemCount;
         ccache->curItemCount++;
     } else {
@@ -147,8 +147,8 @@ int wchunk_select_chunk(WChunkCache *ccache, unsigned int logicalSliceAddr,
     }
 
     // assign to the slot
-    ccache->wchunkStartAddr[selectedSlot] = matchingChunkStartAddr;
-    ccache->wchunk_p[selectedSlot] = selectedChunk;
+    ccache->mapSegmentStartAddr[selectedSlot] = matchingChunkStartAddr;
+    ccache->mapSegment_p[selectedSlot] = selectedChunk;
     // XTime_GetTime(&lruTime);
 
     // totalCacheLoopTime += (cacheLoopTime - startTime);
@@ -188,14 +188,14 @@ found:
     return selectedSlot;
 }
 
-unsigned int wchunk_get(WChunkBucket *wchunkBucket,
+unsigned int mapseg_get(MapSegmentBucket *wchunkBucket,
                         unsigned int logicalSliceAddr) {
     unsigned int virtualSliceAddr, selectedChunkStartAddr, indexInChunk;
-    WChunkCache *ccache;
-    WChunk_p selectedChunk;
+    MapSegmentCache *ccache;
+    MapSegment_p selectedChunk;
 
 //    xil_printf("wchunk start get %p\n", logicalSliceAddr);
-    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+    ccache = &wchunkBucket->mapSegmentCaches[MAPSEG_BUCKET_INDEX(logicalSliceAddr)];
 
     // directly return VSA_NONE on item count is zero
     // because alex loops when no element is inserted
@@ -208,11 +208,11 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
     if (selectedSlot < 0) {
         return VSA_FAIL;
     }
-    selectedChunk = ccache->wchunk_p[selectedSlot];
-    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    selectedChunk = ccache->mapSegment_p[selectedSlot];
+    selectedChunkStartAddr = ccache->mapSegmentStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
-    if (!wchunk_is_valid(ccache, selectedChunk, indexInChunk)) return VSA_FAIL;
+    if (!mapseg_is_valid(ccache, selectedChunk, indexInChunk)) return VSA_FAIL;
 
     virtualSliceAddr = selectedChunk->entries[indexInChunk].virtualSliceAddr;
 
@@ -229,18 +229,18 @@ unsigned int wchunk_get(WChunkBucket *wchunkBucket,
 // XTime maxMarkTime = 0;
 // int OSSD_TICK_PER_SEC = 500000000;
 
-int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
+int mapseg_set(MapSegmentBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr) {
     // XTime startTime, selectTime, midTime, markTime;
     unsigned int selectedChunkStartAddr, indexInChunk;
-    WChunkCache *ccache;
-    WChunk_p selectedChunk;
+    MapSegmentCache *ccache;
+    MapSegment_p selectedChunk;
 //    xil_printf("wchunk start set %p, %p\n", logicalSliceAddr, virtualSliceAddr);
 
 
     // if (virtualSliceAddr == VSA_NONE)
     // XTime_GetTime(&startTime);
-    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+    ccache = &wchunkBucket->mapSegmentCaches[MAPSEG_BUCKET_INDEX(logicalSliceAddr)];
 
     int selectedSlot = wchunk_select_chunk(ccache, logicalSliceAddr, 1);
     if (selectedSlot < 0) {
@@ -249,8 +249,8 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     }
     // if (virtualSliceAddr == VSA_NONE)
     // XTime_GetTime(&selectTime);
-    selectedChunk = ccache->wchunk_p[selectedSlot];
-    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    selectedChunk = ccache->mapSegment_p[selectedSlot];
+    selectedChunkStartAddr = ccache->mapSegmentStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
     selectedChunk->entries[indexInChunk].virtualSliceAddr = virtualSliceAddr;
@@ -258,11 +258,11 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     // XTime_GetTime(&midTime);
 
     if (virtualSliceAddr != VSA_NONE)
-        wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
-                          selectedChunkStartAddr, 1, WCHUNK_FULL_BITS_IN_SLICE);
+        mapseg_mark_valid(ccache, selectedChunk, indexInChunk, 1,
+                          selectedChunkStartAddr, 1, MAPSEG_FULL_BITS_IN_SLICE);
     else
-        wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
-                          selectedChunkStartAddr, 0, WCHUNK_FULL_BITS_IN_SLICE);
+        mapseg_mark_valid(ccache, selectedChunk, indexInChunk, 1,
+                          selectedChunkStartAddr, 0, MAPSEG_FULL_BITS_IN_SLICE);
 
     // if (virtualSliceAddr == VSA_NONE)
     // XTime_GetTime(&markTime);
@@ -316,13 +316,13 @@ int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
     return 0;
 }
 
-int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr) {
-    return wchunk_set(wchunkBucket, logicalSliceAddr, VSA_NONE);
+int mapseg_remove(MapSegmentBucket *wchunkBucket, unsigned int logicalSliceAddr) {
+    return mapseg_set(wchunkBucket, logicalSliceAddr, VSA_NONE);
 }
 
-void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
+void mapseg_deallocate(MapSegmentCache *ccache, MapSegment_p wchunk_p,
                        unsigned int chunkStartAddr) {
-    alex::Alex<unsigned int, WChunk_p>::Iterator it;
+    alex::Alex<unsigned int, MapSegment_p>::Iterator it;
 
     // TODO: implement fm deallocate
     //    it = wchunktree.find(chunkStartAddr);
@@ -333,24 +333,24 @@ void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
 
     // swap with the last one, and decrement the item count
     for (int i = 0; i < ccache->curItemCount; i++) {
-        unsigned int startAddr = ccache->wchunkStartAddr[i];
+        unsigned int startAddr = ccache->mapSegmentStartAddr[i];
         // check if hit
         if (startAddr == chunkStartAddr) {
             // migrate the last slot's one and decrement
-            ccache->wchunkStartAddr[i] =
-                ccache->wchunkStartAddr[ccache->curItemCount - 1];
-            ccache->wchunk_p[i] = ccache->wchunk_p[ccache->curItemCount - 1];
+            ccache->mapSegmentStartAddr[i] =
+                ccache->mapSegmentStartAddr[ccache->curItemCount - 1];
+            ccache->mapSegment_p[i] = ccache->mapSegment_p[ccache->curItemCount - 1];
             ccache->lruValues[i] = ccache->lruValues[ccache->curItemCount - 1];
             ccache->curItemCount--;
         }
     }
 }
 
-int wchunk_get_lru_slot(WChunkCache *ccache) {
+int wchunk_get_lru_slot(MapSegmentCache *ccache) {
     int minLruVal, minLruSlot;
 
     // if cache is not full, no eviction
-    if (ccache->curItemCount < WCHUNK_CACHE_SIZE) return -1;
+    if (ccache->curItemCount < MAPSEG_CACHE_SIZE) return -1;
 
     // set to first item
     minLruVal = ccache->lruValues[0];
@@ -368,30 +368,30 @@ int wchunk_get_lru_slot(WChunkCache *ccache) {
 }
 
 // TODO: handle overflow or take looping approach (measure performance)
-void wchunk_mark_mru(WChunkCache *ccache, int slot) {
+void wchunk_mark_mru(MapSegmentCache *ccache, int slot) {
     ccache->lruValues[slot] = ccache->maxLruValue;
     ccache->maxLruValue++;
 }
 
-int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+int mapseg_is_valid(MapSegmentCache *ccache, MapSegment_p wchunk_p,
                     unsigned int indexInChunk) {
     int validBitIndex, validBitSelector;
-    validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk);
+    validBitIndex = MAPSEG_VALID_BIT_INDEX(indexInChunk);
     validBitSelector =
-        WCHUNK_VALID_BIT_SELECTOR(indexInChunk, WCHUNK_FULL_BITS_IN_SLICE);
+        MAPSEG_VALID_BIT_SELECTOR(indexInChunk, MAPSEG_FULL_BITS_IN_SLICE);
 
     return wchunk_p->validBits[validBitIndex] & validBitSelector;
 }
 
-void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+void mapseg_mark_valid(MapSegmentCache *ccache, MapSegment_p wchunk_p,
                        unsigned int indexInChunk, int length,
                        unsigned int wchunkStartAddr, int isValid,
                        int bitsInSlice) {
     int validBitIndex, validBitSelector, origBits, newBits, numBits = 0;
     for (int i = 0; i < length; i++) {
-        validBitIndex = WCHUNK_VALID_BIT_INDEX(indexInChunk + i);
+        validBitIndex = MAPSEG_VALID_BIT_INDEX(indexInChunk + i);
         validBitSelector =
-            WCHUNK_VALID_BIT_SELECTOR(indexInChunk + i, bitsInSlice);
+            MAPSEG_VALID_BIT_SELECTOR(indexInChunk + i, bitsInSlice);
 
         origBits = wchunk_p->validBits[validBitIndex];
 
@@ -417,7 +417,7 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
             //                wchunkStartAddr, wchunk_p->numOfValidBits);
             //            }
         }
-        wchunk_p->numOfValidBits +=
+        wchunk_p->numOfValidMaps +=
             __builtin_popcountl(newBits) - __builtin_popcountl(origBits);
         wchunk_p->validBits[validBitIndex] = newBits;
     }
@@ -431,21 +431,21 @@ void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
     // }
 
     // deallocate totally unused chunk
-    if (wchunk_p->numOfValidBits == 0)
-        wchunk_deallocate(ccache, wchunk_p, wchunkStartAddr);
-    // wchunk_add_erase_chunk(wchunk_p, wchunkStartAddr);
+    if (wchunk_p->numOfValidMaps == 0)
+        mapseg_deallocate(ccache, wchunk_p, wchunkStartAddr);
+    // mapseg_add_erase_chunk(wchunk_p, wchunkStartAddr);
 }
 
-int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
+int mapseg_mark_valid_partial(MapSegmentBucket *wchunkBucket,
                               unsigned int logicalSliceAddr, int isValid,
                               int start, int end) {
     unsigned int selectedChunkStartAddr, indexInChunk;
-    WChunkCache *ccache;
-    WChunk_p selectedChunk;
+    MapSegmentCache *ccache;
+    MapSegment_p selectedChunk;
 
     int validBitIndex, bitsInSlice, origBits, newBits;
 
-    ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(logicalSliceAddr)];
+    ccache = &wchunkBucket->mapSegmentCaches[MAPSEG_BUCKET_INDEX(logicalSliceAddr)];
 
     // directly return VSA_NONE on item count is zero
     // because alex loops when no element is inserted
@@ -457,8 +457,8 @@ int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
     if (selectedSlot < 0) {
         return 0;
     }
-    selectedChunk = ccache->wchunk_p[selectedSlot];
-    selectedChunkStartAddr = ccache->wchunkStartAddr[selectedSlot];
+    selectedChunk = ccache->mapSegment_p[selectedSlot];
+    selectedChunkStartAddr = ccache->mapSegmentStartAddr[selectedSlot];
     indexInChunk = logicalSliceAddr - selectedChunkStartAddr;
 
     bitsInSlice = 0;
@@ -469,30 +469,30 @@ int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
     //     "before partial mark: addr=%d, validNum=%d, start=%d, end=%d\n",
     //     logicalSliceAddr, selectedChunk->numOfValidBits, start, end);
 
-    wchunk_mark_valid(ccache, selectedChunk, indexInChunk, 1,
+    mapseg_mark_valid(ccache, selectedChunk, indexInChunk, 1,
                       selectedChunkStartAddr, isValid, bitsInSlice);
 
     // return 1 if the entry is totally invalidated, else 0
-    return !wchunk_is_valid(ccache, selectedChunk, indexInChunk);
+    return !mapseg_is_valid(ccache, selectedChunk, indexInChunk);
 
     // xil_printf("partial mark: startAddr=%d, validNum=%d\n",
     //            selectedChunkStartAddr, selectedChunk->numOfValidBits);
 }
 
-void wchunk_add_erase_chunk(WChunk_p wchunk_p, unsigned int wchunkStartAddr) {
-    wchunkEraseList.wchunk_p[wchunkEraseList.curItemCount] = wchunk_p;
-    wchunkEraseList.wchunkStartAddr[wchunkEraseList.curItemCount] =
+void mapseg_add_erase_chunk(MapSegment_p wchunk_p, unsigned int wchunkStartAddr) {
+    wchunkEraseList.mapSegment_p[wchunkEraseList.curItemCount] = wchunk_p;
+    wchunkEraseList.mapSegmentStartAddr[wchunkEraseList.curItemCount] =
         wchunkStartAddr;
     wchunkEraseList.curItemCount++;
 }
 
-void wchunk_handle_erase(WChunkBucket *wchunkBucket) {
-    WChunkCache *ccache;
+void mapseg_handle_erase(MapSegmentBucket *wchunkBucket) {
+    MapSegmentCache *ccache;
     for (int i = 0; i < wchunkEraseList.curItemCount; i++) {
-        ccache = &wchunkBucket->ccaches[WCHUNK_BUCKET_INDEX(
-            wchunkEraseList.wchunkStartAddr[i])];
-        wchunk_deallocate(ccache, wchunkEraseList.wchunk_p[i],
-                          wchunkEraseList.wchunkStartAddr[i]);
+        ccache = &wchunkBucket->mapSegmentCaches[MAPSEG_BUCKET_INDEX(
+            wchunkEraseList.mapSegmentStartAddr[i])];
+        mapseg_deallocate(ccache, wchunkEraseList.mapSegment_p[i],
+                          wchunkEraseList.mapSegmentStartAddr[i]);
     }
     wchunkEraseList.curItemCount = 0;
 }

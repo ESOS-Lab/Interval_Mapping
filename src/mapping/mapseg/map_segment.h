@@ -5,88 +5,92 @@
  *      Author: Minsu Jang (nobleminsu@gmail.com)
  */
 
-#ifndef SRC_MAPPING_WCHUNK_WCHUNK_H_
-#define SRC_MAPPING_WCHUNK_WCHUNK_H_
+#ifndef SRC_MAPPING_MAPSEG_MAP_SEGMENT_H_
+#define SRC_MAPPING_MAPSEG_MAP_SEGMENT_H_
 
 #include "../../address_translation.h"
 #include "../../alex/alex.h"
 
-#define WCHUNK_USE_LAST_SLOT 1
+#define MAPSEG_CACHE_USE_LAST_SLOT 1
 
-#define WCHUNK_LENGTH_DIGIT 10
-#define WCHUNK_BUCKET_DIGIT 4
-#define WCHUNK_LENGTH (1 << WCHUNK_LENGTH_DIGIT)
-#define WCHUNK_BUCKET_SIZE (1 << WCHUNK_BUCKET_DIGIT)
-#define WCHUNK_CACHE_SIZE 20
-#define WCHUNK_START_ADDR_MASK (~(WCHUNK_LENGTH - 1))
-#define WCHUNK_BUCKET_INDEX_MASK \
-    ((WCHUNK_BUCKET_SIZE - 1) << WCHUNK_LENGTH_DIGIT)
-#define WCHUNK_BUCKET_INDEX(lsa) \
-    ((lsa & WCHUNK_BUCKET_INDEX_MASK) >> WCHUNK_LENGTH_DIGIT)
+#define MAPSEG_LENGTH_DIGIT 10
+#define MAPSEG_BUCKET_DIGIT 4
+#define MAPSEG_UNIT_RANGE_SIZE (1 << MAPSEG_LENGTH_DIGIT)
+#define MAPSEG_BUCKET_SIZE (1 << MAPSEG_BUCKET_DIGIT)
+#define MAPSEG_CACHE_SIZE 20
+#define MAPSEG_START_ADDR_MASK (~(MAPSEG_UNIT_RANGE_SIZE - 1))
+#define MAPSEG_BUCKET_INDEX_MASK \
+    ((MAPSEG_BUCKET_SIZE - 1) << MAPSEG_LENGTH_DIGIT)
+#define MAPSEG_BUCKET_INDEX(lsa) \
+    ((lsa & MAPSEG_BUCKET_INDEX_MASK) >> MAPSEG_LENGTH_DIGIT)
 
-#define WCHUNK_VALID_BIT_INDEX(index) (index >> 3)
-#define WCHUNK_VALID_BIT_SELECTOR(index, bitsInSlice) \
+#define MAPSEG_VALID_BIT_INDEX(index) (index >> 3)
+#define MAPSEG_VALID_BIT_SELECTOR(index, bitsInSlice) \
     (bitsInSlice << (28 - ((index & 0x7) << 2)))
-#define WCHUNK_FULL_BITS_IN_SLICE 0xF
+#define MAPSEG_FULL_BITS_IN_SLICE 0xF
 
-#define WCHUNK_ERASE_LIST_LENGTH (1024)
+#define MAPSEG_ERASE_LIST_LENGTH (1024)
 
-typedef struct wchunk {
-    int numOfValidBits;  // number of valid bits, used for efficient decision of
-                         // erase
-    unsigned int validBits[WCHUNK_VALID_BIT_INDEX(WCHUNK_LENGTH)];
-    LOGICAL_SLICE_ENTRY entries[WCHUNK_LENGTH];
-} WChunk, *WChunk_p;
+typedef struct map_segment {
+    unsigned int startLba : 4;
+    unsigned int mappingSize : 2;
+    unsigned int unitRangeSize : 2;
+    int numOfValidMaps : 2;  // number of valid bits, used for efficient
+                             // decision of erase
+    unsigned int validBits[MAPSEG_VALID_BIT_INDEX(MAPSEG_UNIT_RANGE_SIZE)];
+    LOGICAL_SLICE_ENTRY entries[MAPSEG_UNIT_RANGE_SIZE];
+} MapSegment, *MapSegment_p;
 
-using WChunkTree = alex::Alex<unsigned int, WChunk_p>;
-
-typedef struct wchunk_cache {
-    WChunk_p wchunk_p[WCHUNK_CACHE_SIZE];
-    unsigned int wchunkStartAddr[WCHUNK_CACHE_SIZE];
-    int lruValues[WCHUNK_CACHE_SIZE];
+typedef struct map_segment_cache {
+    MapSegment_p mapSegment_p[MAPSEG_CACHE_SIZE];
+    unsigned int mapSegmentStartAddr[MAPSEG_CACHE_SIZE];
+    int lruValues[MAPSEG_CACHE_SIZE];
     int curItemCount;
     int maxLruValue;
 
-#if WCHUNK_USE_LAST_SLOT
+#if MAPSEG_CACHE_USE_LAST_SLOT
     int lastSelectedSlot;
 #endif
-} WChunkCache;
+} MapSegmentCache;
 
-typedef struct wchunk_bucket {
-    WChunkCache ccaches[WCHUNK_BUCKET_SIZE];
-} WChunkBucket, *WChunkBucket_p;
+typedef struct map_segment_bucket {
+    MapSegmentCache mapSegmentCaches[MAPSEG_BUCKET_SIZE];
+} MapSegmentBucket, *MapSegmentBucket_p;
 
-typedef struct wchunk_erase_list {
-    WChunk_p wchunk_p[WCHUNK_ERASE_LIST_LENGTH];
-    unsigned int wchunkStartAddr[WCHUNK_ERASE_LIST_LENGTH];
+typedef struct map_segment_erase_list {
+    MapSegment_p mapSegment_p[MAPSEG_ERASE_LIST_LENGTH];
+    unsigned int mapSegmentStartAddr[MAPSEG_ERASE_LIST_LENGTH];
     int curItemCount;
-} WChunkEraseList;
+} MapSegmentEraseList;
 
-void wchunk_init();
-unsigned int wchunk_get(WChunkBucket *wchunkBucket,
+void mapseg_init();
+unsigned int mapseg_get(MapSegmentBucket *wchunkBucket,
                         unsigned int logicalSliceAddr);
-int wchunk_set(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
+int mapseg_set(MapSegmentBucket *wchunkBucket, unsigned int logicalSliceAddr,
                unsigned int virtualSliceAddr);
-int wchunk_set_range(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr,
-                     int length, unsigned int virtualSliceAddr);
-int wchunk_remove(WChunkBucket *wchunkBucket, unsigned int logicalSliceAddr);
-int wchunk_remove_range(WChunkBucket *wchunkBucket,
+int mapseg_set_range(MapSegmentBucket *wchunkBucket,
+                     unsigned int logicalSliceAddr, int length,
+                     unsigned int virtualSliceAddr);
+int mapseg_remove(MapSegmentBucket *wchunkBucket,
+                  unsigned int logicalSliceAddr);
+int mapseg_remove_range(MapSegmentBucket *wchunkBucket,
                         unsigned int logicalSliceAddr, int length);
 
-void wchunk_deallocate(WChunkCache *ccache, WChunk_p wchunk_p,
+void mapseg_deallocate(MapSegmentCache *ccache, MapSegment_p wchunk_p,
                        unsigned int chunkStartAddr);
-int wchunk_is_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+int mapseg_is_valid(MapSegmentCache *ccache, MapSegment_p wchunk_p,
                     unsigned int indexInChunk);
-void wchunk_mark_valid(WChunkCache *ccache, WChunk_p wchunk_p,
+void mapseg_mark_valid(MapSegmentCache *ccache, MapSegment_p wchunk_p,
                        unsigned int indexInChunk, int length,
                        unsigned int wchunkStartAddr, int isValid,
                        int bitsInSlice);
-int wchunk_mark_valid_partial(WChunkBucket *wchunkBucket,
+int mapseg_mark_valid_partial(MapSegmentBucket *wchunkBucket,
                               unsigned int logicalSliceAddr, int isValid,
                               int start, int end);
 
-void wchunk_add_erase_chunk(WChunk_p wchunk_p, unsigned int wchunkStartAddr);
-void wchunk_handle_erase(WChunkBucket *wchunkBucket);
-extern WChunkBucket *wchunkBucket;
+void mapseg_add_erase_chunk(MapSegment_p wchunk_p,
+                            unsigned int wchunkStartAddr);
+void mapseg_handle_erase(MapSegmentBucket *wchunkBucket);
+extern MapSegmentBucket *wchunkBucket;
 
-#endif /* SRC_MAPPING_WCHUNK_WCHUNK_H_ */
+#endif /* SRC_MAPPING_MAPSEG_MAP_SEGMENT_H_ */

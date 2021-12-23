@@ -48,7 +48,7 @@
 #include "xil_printf.h"
 #include <assert.h>
 #include "memory_map.h"
-#include "mapping/wchunk/wchunk.h"
+#include "mapping/mapseg/map_segment.h"
 
 P_GC_VICTIM_MAP gcVictimMapPtr;
 
@@ -85,7 +85,7 @@ void GarbageCollection(unsigned int dieNo)
 //			logicalSliceAddr = virtualSlice.find(virtualSliceAddr).payload();
 
 			if(logicalSliceAddr != LSA_NONE)
-				if (wchunk_get(wchunkBucket, logicalSliceAddr) == virtualSliceAddr)
+				if (mapseg_get(wchunkBucket, logicalSliceAddr) == virtualSliceAddr)
 //				if (fhm_get(logicalSliceAddr) == virtualSliceAddr)
 //				if (logicalSlice.find(logicalSliceAddr).payload() == virtualSliceAddr)
 //				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
@@ -125,7 +125,7 @@ void GarbageCollection(unsigned int dieNo)
 					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = FindFreeVirtualSliceForGc(dieNoForGcCopy, victimBlockNo);
 
 					// TODO: update
-					wchunk_set(wchunkBucket, logicalSliceAddr, reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr);
+					mapseg_set(wchunkBucket, logicalSliceAddr, reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr);
 //					fhm_update(logicalSliceAddr, virtualSliceAddr);
 //					*logicalSlice.get_payload(logicalSliceAddr) = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
 //					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
