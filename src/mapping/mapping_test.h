@@ -10,6 +10,6 @@
 
 void test_fhm();
 void test_hotmap();
-void test_ftable();
+void test_mapseg();
 
 #endif /* SRC_MAPPING_MAPPING_TEST_H_ */
