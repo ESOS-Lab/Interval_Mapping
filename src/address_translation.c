@@ -687,15 +687,39 @@ void InitBlockDieMap() {
 	InitCurrentBlockOfDieMap();
 }
 
+XTime lastReportTime;
+int calls = 0;
+XTime totalGetTime;
+int OSSD_TICK_PER_SEC = 500000000;
 unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
+		XTime startTime, getTime;
 //	alex::Alex<unsigned int, unsigned int>::Iterator it;
 
 	// if (logicalSliceAddr < SLICES_PER_SSD) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
-		return mapseg_get_mapping(wchunkBucket, logicalSliceAddr);
+	XTime_GetTime(&startTime);
+	virtualSliceAddr = mapseg_get_mapping(wchunkBucket, logicalSliceAddr);
+		XTime_GetTime(&getTime);
+		
+	totalGetTime += (getTime - startTime);
+	calls++;
+
+	if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+		char reportString[1024];
+		sprintf(
+			reportString,
+			"sec %f reporting calls: %d avg_getTime: %f \n",
+			1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
+			1.0 * totalGetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
+		xil_printf("%s", reportString);
+
+		lastReportTime = startTime;
+		calls = 0;
+		totalGetTime = 0;
+	}
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 		if (virtualSliceAddr != VSA_NONE)
@@ -707,11 +731,6 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	// 			!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
-//XTime lastReportTime;
-//int calls = 0;
-//XTime totalInvTime;
-//XTime totalSetTime;
-//int OSSD_TICK_PER_SEC = 500000000;
 
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
@@ -847,14 +866,6 @@ unsigned int FindDieForFreeSliceAllocation() {
 
 	return targetDie;
 }
-
-XTime lastReportTime_I = 0;
-int calls_I = 0;
-XTime totalGetTime = 0;
-XTime totalRemoveTime = 0;
-XTime maxGetTime = 0;
-XTime maxRemoveTime = 0;
-int OSSD_TICK_PER_SEC = 500000000;
 
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
