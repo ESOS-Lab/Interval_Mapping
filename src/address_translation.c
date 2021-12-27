@@ -689,38 +689,18 @@ void InitBlockDieMap() {
 
 XTime lastReportTime;
 int calls = 0;
-XTime totalGetTime;
+XTime totalSetTime;
 int OSSD_TICK_PER_SEC = 500000000;
 
 unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
-	XTime startTime, getTime;
 //	alex::Alex<unsigned int, unsigned int>::Iterator it;
 
 	// if (logicalSliceAddr < SLICES_PER_SSD) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
-    XTime_GetTime(&startTime);
     virtualSliceAddr = mapseg_get_mapping(logicalSliceAddr);
-        XTime_GetTime(&getTime);
-        
-    totalGetTime += (getTime - startTime);
-    calls++;
-
-    if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
-        char reportString[1024];
-        sprintf(
-            reportString,
-            "sec %f reporting calls: %d avg_getTime: %f \n",
-            1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
-            1.0 * totalGetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
-        xil_printf("%s", reportString);
-
-        lastReportTime = startTime;
-        calls = 0;
-        totalGetTime = 0;
-    }
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 		if (virtualSliceAddr != VSA_NONE)
@@ -741,18 +721,20 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
 
-	// if (logicalSliceAddr < SLICES_PER_SSD) {
-		XTime startTime, invTime, setTime;
+	// if (logicalSliceAddr < SLICES_PER_SSD) {       
+	XTime startTime, setTime;
 
-		// XTime_GetTime(&startTime);
+		XTime_GetTime(&startTime);
 		InvalidateOldVsa(logicalSliceAddr);
 		// XTime_GetTime(&invTime);
 
 		virtualSliceAddr = FindFreeVirtualSlice();
 
 		mapseg_set_mapping(logicalSliceAddr, virtualSliceAddr);
-		// XTime_GetTime(&setTime);
+		XTime_GetTime(&setTime);
 
+        totalSetTime += (setTime - startTime);
+        calls++;
 		// totalInvTime += (invTime - startTime);
 		// totalSetTime += (setTime - invTime);
 		// calls++;
@@ -764,21 +746,19 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
 				logicalSliceAddr;
 
-		// if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
-		// 	char reportString[1024];
-		// 	sprintf(reportString, 
-		// 	"sec %f reporting calls: %d avg_invTime: %f avg_setTime: %f\n", 
-		// 		1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
-		// 		1.0 * totalInvTime / OSSD_TICK_PER_SEC * 1000000 / calls,
-		// 		1.0 * totalSetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
-		// 	xil_printf("%s", reportString);
-			
-		// 	lastReportTime = startTime;
-		// 	calls = 0;
-		// 	totalInvTime = 0;
-		// 	totalSetTime = 0;
-		// }
+        if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+            char reportString[1024];
+            sprintf(
+                reportString,
+                "sec %f reporting calls: %d avg_setTime: %f \n",
+                1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
+                1.0 * totalSetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
+            xil_printf("%s", reportString);
 
+            lastReportTime = startTime;
+            calls = 0;
+            totalSetTime = 0;
+        }
 		return virtualSliceAddr;
 	// } else
 	// 	assert(
