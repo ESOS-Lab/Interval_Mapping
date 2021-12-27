@@ -84,25 +84,26 @@ void mapseg_init_map_segment(MapSegment *pMapSegment, unsigned int startLsa) {
     // xil_printf("init map seg %p\n", pMapSegment->startLsa);
 }
 
-// XTime lastReportTime;
-// int calls = 0;
-// XTime totalCacheLoopTime;
-// XTime totalFindTime;
-// XTime totalAllocateTime;
-// XTime totalLruTime;
-// int OSSD_TICK_PER_SEC = 500000000;
+XTime lastReportTime;
+int callsCache = 0;
+int callsMap = 0;
+XTime totalCacheSearchTime;
+XTime totalMapSearchTime;
+int OSSD_TICK_PER_SEC = 500000000;
 
 int mapseg_select_map_segment(MapSegmentCache *ccache,
-                              unsigned int logicalSliceAddr, int isAllocate) {
-    XTime startTime, cacheLoopTime, findTime, allocateTime, lruTime;
+                              unsigned int logicalSliceAddr, int isAllocate) {    
+    XTime startTime, searchTime;
     int selectedSlot, bypassAlexFind = 0;
     int tree_num;
     FunctionalMappingTree *fmTree;
     MapSegment_p selectedMapSegment = NULL;
+    int isCache = 0;
     // alex::Alex<unsigned int, WChunk_p>::Iterator it;
 
     // unsigned int matchingChunkStartAddr =
     //     logicalSliceAddr & MAPSEG_START_ADDR_MASK;
+    XTime_GetTime(&startTime);
 
 #if MAPSEG_CACHE_USE_LAST_SLOT
     // select chunk
@@ -115,6 +116,8 @@ int mapseg_select_map_segment(MapSegmentCache *ccache,
         selectedSlot = ccache->lastSelectedSlot;
         selectedMapSegment = ccache->mapSegment_p[ccache->lastSelectedSlot];
         // xil_printf("last sel found %p\n", selectedMapSegment);
+        XTime_GetTime(&searchTime);
+        isCache = 1;
         goto found;
     }
 #endif
@@ -128,6 +131,8 @@ int mapseg_select_map_segment(MapSegmentCache *ccache,
             selectedMapSegment = ccache->mapSegment_p[i];
             selectedSlot = i;
             // xil_printf("cache found %p\n", selectedMapSegment);
+            XTime_GetTime(&searchTime);
+            isCache = 1;
             goto found;
         }
     }
@@ -163,6 +168,7 @@ int mapseg_select_map_segment(MapSegmentCache *ccache,
     // assign to the slot
     ccache->mapSegmentStartLsa[selectedSlot] = selectedMapSegment->startLsa;
     ccache->mapSegment_p[selectedSlot] = selectedMapSegment;
+    XTime_GetTime(&searchTime);
     // XTime_GetTime(&lruTime);
 
     // totalCacheLoopTime += (cacheLoopTime - startTime);
@@ -191,6 +197,33 @@ int mapseg_select_map_segment(MapSegmentCache *ccache,
     //     totalLruTime = 0;
     // }
 found:
+    if (isCache) {
+        totalCacheSearchTime += (searchTime - startTime);
+        callsCache++;
+    } else {
+        totalMapSearchTime += (searchTime - startTime);
+        callsMap++;
+    }
+
+    if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+        char reportString[1024];
+        sprintf(
+            reportString,
+            "sec %f reporting callsC: %d callsM: %d avgCTime: %f avgMTime: "
+            "%f\n ",
+            1.0 * startTime / (OSSD_TICK_PER_SEC), callsCache, callsMap,
+            1.0 * totalCacheSearchTime / OSSD_TICK_PER_SEC * 1000000 /
+                callsCache,
+            1.0 * totalMapSearchTime / OSSD_TICK_PER_SEC * 1000000 / callsMap);
+        xil_printf("%s", reportString);
+
+        lastReportTime = startTime;
+        callsCache = 0;
+        callsMap = 0;
+        totalCacheSearchTime = 0;
+        totalMapSearchTime = 0;
+    }
+
     // mark as most recently used one
     wchunk_mark_mru(ccache, selectedSlot);
 

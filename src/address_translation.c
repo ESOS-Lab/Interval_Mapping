@@ -687,13 +687,8 @@ void InitBlockDieMap() {
 	InitCurrentBlockOfDieMap();
 }
 
-XTime lastReportTime;
-int calls = 0;
-XTime totalSetTime;
-int OSSD_TICK_PER_SEC = 500000000;
 unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
-		XTime startTime, getTime;
 //	alex::Alex<unsigned int, unsigned int>::Iterator it;
 
 	// if (logicalSliceAddr < SLICES_PER_SSD) {
@@ -718,9 +713,6 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr;
 
 	// if (logicalSliceAddr < SLICES_PER_SSD) {
-		XTime startTime, setTime;
-
-		XTime_GetTime(&startTime);
 		// XTime_GetTime(&startTime);
 		InvalidateOldVsa(logicalSliceAddr);
 		// XTime_GetTime(&invTime);
@@ -729,10 +721,6 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 
 		mapseg_set_mapping(wchunkBucket, logicalSliceAddr, virtualSliceAddr);
 		// XTime_GetTime(&setTime);
-		XTime_GetTime(&setTime);
-
-		totalSetTime += (setTime - startTime);
-		calls++;
 
 		// totalInvTime += (invTime - startTime);
 		// totalSetTime += (setTime - invTime);
@@ -745,19 +733,6 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
 				logicalSliceAddr;
 
-		if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
-			char reportString[1024];
-			sprintf(
-				reportString,
-				"sec %f reporting calls: %d avg_setTime: %f \n",
-				1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
-				1.0 * totalSetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
-			xil_printf("%s", reportString);
-
-			lastReportTime = startTime;
-			calls = 0;
-			totalSetTime = 0;
-		}
 		return virtualSliceAddr;
 	// } else
 	// 	assert(
