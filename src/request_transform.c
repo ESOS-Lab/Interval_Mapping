@@ -79,10 +79,17 @@ void InitDependencyTable()
 	}
 }
 
+
+XTime lastReportTime;
+unsigned int minLba[8];
+unsigned int maxLba[8];
+int OSSD_TICK_PER_SEC = 500000000;
+
 // TODO: need to extend startLba to include 36bit (48bit LBA - 12bit (nvme block size))
 void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigned int nlb, unsigned int cmdCode)
 {
 	unsigned int reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode;
+    XTime thisTime;
 
 	requestedNvmeBlock = nlb + 1;
 	transCounter = 0;
@@ -163,6 +170,27 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
 
 	PutToSliceReqQ(reqSlotTag);
+
+	XTime_GetTime(&thisTime);
+	
+	int type = (startLba >> 29) & 0x7;
+	if (startLba < minLba[type]) minLba[type] = startLba;
+	if (startLba + requestedNvmeBlock > maxLba[type]) maxLba[type] = startLba + requestedNvmeBlock;
+
+    if (1.0 * (thisTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+		for (int i = 0; i < 8; i++){
+			char reportString[1024];
+			sprintf(
+				reportString,
+				"sec %f reporting type %d lba: [%p - %p]\n ",
+				1.0 * thisTime / (OSSD_TICK_PER_SEC), i, minLba[i], maxLba[i]);
+			xil_printf("%s", reportString);
+
+			lastReportTime = thisTime;
+			minLba[i] = 0xFFFFFFFF;
+			maxLba[i] = 0;
+		}
+    }
 }
 
 //XTime lastReportTime_I = 0;
