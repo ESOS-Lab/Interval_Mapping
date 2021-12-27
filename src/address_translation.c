@@ -95,7 +95,7 @@ void InitAddressMap() {
 	InitBlockDieMap();
 	mapseg_init();
 
-	xil_printf("init with %p, chunkBucket=%p\n", allocator_start_addr, wchunkBucket);
+	xil_printf("init with %p\n", allocator_start_addr);
 
 }
 
@@ -695,7 +695,7 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 //		it = logicalSlice.find(logicalSliceAddr);
 //		if (it.cur_leaf_ == nullptr) virtualSliceAddr = VSA_NONE;
 //		else virtualSliceAddr = it.payload();
-		return mapseg_get_mapping(wchunkBucket, logicalSliceAddr);
+		return mapseg_get_mapping(logicalSliceAddr);
 //		virtualSliceAddr =
 //				logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr;
 		if (virtualSliceAddr != VSA_NONE)
@@ -725,7 +725,7 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 
 		virtualSliceAddr = FindFreeVirtualSlice();
 
-		mapseg_set_mapping(wchunkBucket, logicalSliceAddr, virtualSliceAddr);
+		mapseg_set_mapping(logicalSliceAddr, virtualSliceAddr);
 		// XTime_GetTime(&setTime);
 
 		// totalInvTime += (invTime - startTime);
@@ -859,7 +859,7 @@ int OSSD_TICK_PER_SEC = 500000000;
 void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
 
-	virtualSliceAddr = mapseg_get_mapping(wchunkBucket, logicalSliceAddr);
+	virtualSliceAddr = mapseg_get_mapping(logicalSliceAddr);
 
 //	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 //	virtualSliceAddr =
@@ -877,7 +877,7 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		// unlink
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
-		mapseg_remove(wchunkBucket, logicalSliceAddr);
+		mapseg_remove(logicalSliceAddr);
 //		logicalSlice.erase(logicalSliceAddr);
 //		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
 //		VSA_NONE;
@@ -893,7 +893,7 @@ void InvalidateOldVsaAll(unsigned int logicalSliceAddr, int length) {
 	int is_success = 1;
 
 	for (int i = 0; i < length; i++) {
-		virtualSliceAddr = mapseg_get_mapping(wchunkBucket, logicalSliceAddr + i);
+		virtualSliceAddr = mapseg_get_mapping(logicalSliceAddr + i);
 
 	//	virtualSliceAddr = logicalSlice.find(logicalSliceAddr).payload();
 	//	virtualSliceAddr =
@@ -922,8 +922,6 @@ void InvalidateOldVsaAll(unsigned int logicalSliceAddr, int length) {
 		} else
 			is_success = 0;
 	}
-	// if (is_success)
-	// 	mapseg_remove_range(wchunkBucket, logicalSliceAddr, length);
 }
 
 void EraseBlock(unsigned int dieNo, unsigned int blockNo) {

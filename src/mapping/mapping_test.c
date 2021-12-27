@@ -24,9 +24,9 @@ void test_mapseg() {
     mapseg_init();
     for (int i = 0; i < 30; i++) {
         xil_printf("setting %d\n", i);
-        int isSetSuccess = mapseg_set_mapping(wchunkBucket, i, i + 1);
+        int isSetSuccess = mapseg_set_mapping(i, i + 1);
         xil_printf("getting %d\n", i);
-        unsigned int out = mapseg_get_mapping(wchunkBucket, i);
+        unsigned int out = mapseg_get_mapping(i);
         xil_printf("set success is %d, out is %d\n", isSetSuccess, out);
     }
 

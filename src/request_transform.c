@@ -216,7 +216,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		// TODO: handle offsetted Slices
 		if (startLsa == endLsa) {
 			// only in a single slice
-			isInvalidated = mapseg_mark_valid_partial(wchunkBucket, startLsa, 0, startOffset, endOffset);
+			isInvalidated = mapseg_mark_valid_partial(startLsa, 0, startOffset, endOffset);
 			if (isInvalidated) {
 				InvalidateOldVsa(startLsa);
 			}
@@ -225,7 +225,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 
 		
 		if (startOffset > 0) {
-			isInvalidated = mapseg_mark_valid_partial(wchunkBucket, startLsa, 0, startOffset, NVME_BLOCKS_PER_SLICE);
+			isInvalidated = mapseg_mark_valid_partial(startLsa, 0, startOffset, NVME_BLOCKS_PER_SLICE);
 			if (isInvalidated) {
 				InvalidateOldVsa(startLsa);
 			}
@@ -247,7 +247,7 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		// tempLsa = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) / NVME_BLOCKS_PER_SLICE;
 		// if (oldTempLsa != tempLsa) xil_printf("lsa is differenct, %p, %p\n", oldTempLsa, tempLsa);
 		if (endOffset > 0) {
-			isInvalidated = mapseg_mark_valid_partial(wchunkBucket, endLsa, 0, 0, endOffset);
+			isInvalidated = mapseg_mark_valid_partial(endLsa, 0, 0, endOffset);
 			if (isInvalidated) {
 				if(tempLsa != endLsa) xil_printf("dif %p, %p\n", tempLsa, endLsa);
 				InvalidateOldVsa(endLsa);
