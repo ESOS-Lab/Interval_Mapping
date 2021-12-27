@@ -60,11 +60,18 @@ void mapseg_init_map_segment(MapSegment *pMapSegment, unsigned int startLsa) {
                              pMapSegment->mappingSize);
 }
 
+XTime lastReportTime;
+int callsMap = 0;
+XTime totalMapSearchTime;
+int OSSD_TICK_PER_SEC = 500000000;
+
 MapSegment *mapseg_select_map_segment(unsigned int logicalSliceAddr,
                                       int isAllocate) {
+    XTime startTime, searchTime;
     FunctionalMappingTree *fmTree;
     MapSegment_p selectedMapSegment = NULL;
 
+    XTime_GetTime(&startTime);
     fmTree = &fmTrees[LSA_TO_TREE_NUM(logicalSliceAddr)];
     if (isFmTreesInitialized[LSA_TO_TREE_NUM(logicalSliceAddr)] == 0) {
         isFmTreesInitialized[LSA_TO_TREE_NUM(logicalSliceAddr)] = 1;
@@ -73,6 +80,25 @@ MapSegment *mapseg_select_map_segment(unsigned int logicalSliceAddr,
     }
     selectedMapSegment =
         fetchMapSegmentFromFmTree(fmTree, logicalSliceAddr, isAllocate);
+    XTime_GetTime(&searchTime);
+    
+    totalMapSearchTime += (searchTime - startTime);
+    callsMap++;
+
+    if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
+        char reportString[1024];
+        sprintf(
+            reportString,
+            "sec %f reporting calls: %d avgSearchTime: "
+            "%f\n ",
+            1.0 * startTime / (OSSD_TICK_PER_SEC), callsMap,
+            1.0 * totalMapSearchTime / OSSD_TICK_PER_SEC * 1000000 / callsMap);
+        xil_printf("%s", reportString);
+
+        lastReportTime = startTime;
+        callsMap = 0;
+        totalMapSearchTime = 0;
+    }
 
     return selectedMapSegment;
 }
