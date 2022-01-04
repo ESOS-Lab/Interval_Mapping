@@ -21,7 +21,7 @@
 char *ftableMemPool = (char *)RESERVED0_START_ADDR;
 
 FunctionalMappingTree fmTrees[FUNCTIONAL_MAPPING_TREE_COUNT];
-OpenSSDAllocator<TempNode> tAllocator;
+OpenSSDAllocator<DataNode> tAllocator;
 OpenSSDAllocator<MapSegment> mapSegmentAllocator;
 
 int isFmTreesInitialized[FUNCTIONAL_MAPPING_TREE_COUNT];
