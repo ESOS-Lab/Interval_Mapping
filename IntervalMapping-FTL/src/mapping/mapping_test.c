@@ -22,12 +22,14 @@ void test_mapseg() {
     xil_printf("Starting ftable test...\n");
 
     mapseg_init();
-    for (int i = 0; i < 30; i++) {
-        xil_printf("setting %d\n", i);
-        int isSetSuccess = mapseg_set_mapping(i, i + 1);
-        xil_printf("getting %d\n", i);
-        unsigned int out = mapseg_get_mapping(i);
-        xil_printf("set success is %d, out is %d\n", isSetSuccess, out);
+    for (unsigned int msb = 0; msb < 8; msb++)
+    for (unsigned int i = 0; i < 10 * 16 * (1 << 16); i++) {
+//        xil_printf("setting %d\n", i);
+        int isSetSuccess = mapseg_set_mapping((msb << 27) + i, i + 1);
+//        xil_printf("getting %d\n", i);
+        unsigned int out = mapseg_get_mapping((msb << 27) + i);
+        if (out != i+1)
+        	xil_printf("set fail %d, out is %d\n", isSetSuccess, out);
     }
 
     //    FTable* ftable = ftable_create_table(

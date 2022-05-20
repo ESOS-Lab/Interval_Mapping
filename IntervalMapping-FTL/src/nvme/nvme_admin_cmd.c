@@ -335,7 +335,7 @@ void handle_identify(NVME_ADMIN_COMMAND *nvmeAdminCmd, NVME_COMPLETION *nvmeCPL)
 		prp[0] = nvmeAdminCmd->PRP2[0];
 		prp[1] = nvmeAdminCmd->PRP2[1];
 
-		ASSERT((prp[1] & 0xFFF) == 0);
+//		ASSERT((prp[1] & 0xFFF) == 0);
 
 		set_direct_tx_dma(pIdentifyData, prp[1], prp[0], prpLen);
 	}

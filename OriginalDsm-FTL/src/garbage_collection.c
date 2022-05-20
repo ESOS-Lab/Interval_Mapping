@@ -49,6 +49,11 @@
 #include <assert.h>
 #include "memory_map.h"
 
+#include <stdio.h>
+#include <string.h>
+#include "xtime_l.h"
+#include "xparameters.h"
+
 P_GC_VICTIM_MAP gcVictimMapPtr;
 
 void InitGcVictimMap()
@@ -67,10 +72,26 @@ void InitGcVictimMap()
 	}
 }
 
+int isGCRan = 0;
+XTime lastReportedTime = 0;
+int lastReportedGCBlocks = 0;
+int lastReportedGCPages = 0; // 16K
+int curGCBlocks = 0;
+int curGCPages = 0;
+XTime curTime;
 
 void GarbageCollection(unsigned int dieNo)
 {
 	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag;
+    XTime gcTime;
+
+    if (!isGCRan) {
+        XTime_GetTime(&gcTime);
+        isGCRan = 1;
+        char outText[32];
+        sprintf(outText, "[%fs]GC has just started %d\n", 1.0 * gcTime / 500000000, dieNo);
+        xil_printf("%s", outText);
+    }
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
 	dieNoForGcCopy = dieNo;
@@ -123,11 +144,32 @@ void GarbageCollection(unsigned int dieNo)
 					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
 
 					SelectLowLevelReqQ(reqSlotTag);
+					
+                    curGCPages++;
 				}
 		}
 	}
 
 	EraseBlock(dieNo, victimBlockNo);
+	
+
+    curGCBlocks++;
+
+    XTime_GetTime(&curTime);
+    if (1.0 * (curTime - lastReportedTime) / (500000000) >= 10) {
+        char reportString[1024];
+        sprintf(reportString,
+            "sec %f reporting curBlock %d curPage %d totalBlock %d totalPage %d\n",
+            1.0 * curTime / (500000000),
+            curGCBlocks, curGCPages, lastReportedGCBlocks + curGCBlocks, lastReportedGCPages + curGCPages);
+        xil_printf("%s", reportString);
+
+        lastReportedGCBlocks += curGCBlocks;
+        lastReportedGCPages += curGCPages;
+        lastReportedTime = curTime;
+        curGCBlocks = 0;
+        curGCPages = 0;
+    }
 }
 
 
