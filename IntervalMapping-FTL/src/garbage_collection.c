@@ -145,7 +145,7 @@ void GarbageCollection(unsigned int dieNo)
 					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = FindFreeVirtualSliceForGc(dieNoForGcCopy, victimBlockNo);
 
 					// TODO: update
-					mapseg_set_mapping(logicalSliceAddr, reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr);
+					mapseg_set_mapping(logicalSliceAddr, reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr, false);
 //					fhm_update(logicalSliceAddr, virtualSliceAddr);
 //					*logicalSlice.get_payload(logicalSliceAddr) = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
 //					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;

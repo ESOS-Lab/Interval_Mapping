@@ -39,6 +39,9 @@ public:
 		// }
 
 		// xil_printf("trying to allocate size=%p\n", n * sizeof(T));
+		if ((unsigned int)memAddr % 4 > 0) {
+			memAddr = (void*)((unsigned int) memAddr - (unsigned int)memAddr % 4 + 4);
+		}
 		T* p = static_cast<T *>(memAddr);
 		memAddr += n * sizeof(T);
 		// T* p = static_cast<T *>(sm_malloc(n * sizeof(T)));

@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include "mapseg/map_segment.h"
+#include "xtime_l.h"
 
 // alex::Alex<unsigned int, unsigned int> testHotmap;
 int testCurMaxFtableIdx = -1;
@@ -19,18 +20,30 @@ void test_fhm() {
 }
 void test_hotmap() {}
 void test_mapseg() {
-    xil_printf("Starting ftable test...\n");
+    xil_printf("Starting mapseg test...\n");
+
+    XTime startTime;
+    XTime mapTime;
+
+    XTime_GetTime(&startTime);
 
     mapseg_init();
     for (unsigned int msb = 0; msb < 8; msb++)
-    for (unsigned int i = 0; i < 10 * 16 * (1 << 16); i++) {
-//        xil_printf("setting %d\n", i);
-        int isSetSuccess = mapseg_set_mapping((msb << 27) + i, i + 1);
-//        xil_printf("getting %d\n", i);
-        unsigned int out = mapseg_get_mapping((msb << 27) + i);
-        if (out != i+1)
-        	xil_printf("set fail %d, out is %d\n", isSetSuccess, out);
-    }
+        for (unsigned int i = 0; i < 10 * 16 * (1 << 16); i++) {
+            //        xil_printf("setting %d\n", i);
+            int isSetSuccess = mapseg_set_mapping((msb << 27) + i, i + 1, false);
+            //        xil_printf("getting %d\n", i);
+            unsigned int out = mapseg_get_mapping((msb << 27) + i);
+            if (out != i + 1)
+                xil_printf("set fail %d, out is %d\n", isSetSuccess, out);
+        }
+
+    XTime_GetTime(&mapTime);
+
+    char outText[128];
+    sprintf(outText, "mapseg test took %f sec\n",
+            1.0 * (mapTime - startTime) / 500000000);
+    xil_printf("%s", outText);
 
     //    FTable* ftable = ftable_create_table(
     //        0, testHotFTables, &testCurMaxFtableIdx,

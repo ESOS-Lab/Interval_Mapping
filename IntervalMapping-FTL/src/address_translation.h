@@ -195,7 +195,7 @@ unsigned int FindFreeVirtualSlice();
 unsigned int FindFreeVirtualSliceForGc(unsigned int copyTargetDieNo, unsigned int victimBlockNo);
 unsigned int FindDieForFreeSliceAllocation();
 
-void InvalidateOldVsa(unsigned int logicalSliceAddr);
+void InvalidateOldVsa(unsigned int logicalSliceAddr, bool last_discard);
 void InvalidateOldVsaAll(unsigned int logicalSliceAddr, int length);
 void EraseBlock(unsigned int dieNo, unsigned int blockNo);
 

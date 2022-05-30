@@ -205,9 +205,10 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 	// XTime_GetTime(&memc);
 
 	DATASET_MANAGEMENT_RANGE *dsmRange = (DATASET_MANAGEMENT_RANGE*)ADMIN_CMD_DRAM_DATA_BUFFER;
-
+//	xil_printf("%s: 1\n", __func__);
 	for (int i = 0; i < numRanges + 1; i++, dsmRange++) {
 		// TODO: convert to 64-bit LBA
+
 		startLsa = dsmRange->startingLBA[0] / NVME_BLOCKS_PER_SLICE;
 		startOffset = dsmRange->startingLBA[0] % NVME_BLOCKS_PER_SLICE;
 		endLsa = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) / NVME_BLOCKS_PER_SLICE;
@@ -216,18 +217,19 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		// TODO: handle offsetted Slices
 		if (startLsa == endLsa) {
 			// only in a single slice
-			isInvalidated = mapseg_mark_valid_partial(startLsa, 0, startOffset, endOffset);
+			isInvalidated = mapseg_mark_valid_partial(startLsa, 0, startOffset, endOffset, true);
 			if (isInvalidated) {
-				InvalidateOldVsa(startLsa);
+				InvalidateOldVsa(startLsa, true);
 			}
 			continue;
 		}
 
 		tempLsa = startLsa;
 		if (startOffset > 0) {
-			isInvalidated = mapseg_mark_valid_partial(startLsa, 0, startOffset, NVME_BLOCKS_PER_SLICE);
+			isInvalidated = mapseg_mark_valid_partial(startLsa, 0, startOffset, NVME_BLOCKS_PER_SLICE,
+					( (startLsa + 1 == endLsa) && (endOffset == 0) ) );
 			if (isInvalidated) {
-				InvalidateOldVsa(startLsa);
+				InvalidateOldVsa(startLsa, false);
 			}
 			tempLsa++;
 		}
@@ -240,21 +242,26 @@ void ReqHandleDatasetManagement(unsigned int cmdSlotTag,
 		for (; tempLsa < endLsa; tempLsa++) {
 		// tempLsa = startLsa + 1;
 		// while (tempLsa * NVME_BLOCKS_PER_SLICE + 3 < dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) {
-			InvalidateOldVsa(tempLsa);
+			InvalidateOldVsa(tempLsa, (endOffset == 0) );
 			// tempLsa++;
 		}
 
 		// unsigned int oldTempLsa = tempLsa;
 		// tempLsa = (dsmRange->startingLBA[0] + dsmRange->lengthInLogicalBlocks) / NVME_BLOCKS_PER_SLICE;
 		// if (oldTempLsa != tempLsa) xil_printf("lsa is differenct, %p, %p\n", oldTempLsa, tempLsa);
+//		if (endOffset > 0) {
 		if (endOffset > 0) {
-			isInvalidated = mapseg_mark_valid_partial(endLsa, 0, 0, endOffset);
+			isInvalidated = mapseg_mark_valid_partial(endLsa, 0, 0, endOffset, true);
 			if (isInvalidated) {
 				if(tempLsa != endLsa) xil_printf("dif %p, %p\n", tempLsa, endLsa);
-				InvalidateOldVsa(endLsa);
+				InvalidateOldVsa(endLsa, true);
 			}
+		} else {
+//			InvalidateOldVsa(endLsa, true);
 		}
 	}
+//	xil_printf("%s: 2\n", __func__);
+
 	
 	// XTime_GetTime(&inv);
 

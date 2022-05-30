@@ -720,13 +720,14 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 		XTime startTime, invTime, setTime;
 
 		// XTime_GetTime(&startTime);
-		InvalidateOldVsa(logicalSliceAddr);
+		InvalidateOldVsa(logicalSliceAddr, false);
 		// XTime_GetTime(&invTime);
 
 		virtualSliceAddr = FindFreeVirtualSlice();
-
-		mapseg_set_mapping(logicalSliceAddr, virtualSliceAddr);
+//		xil_printf("%s: 1\n", __func__);
+		mapseg_set_mapping(logicalSliceAddr, virtualSliceAddr, false);
 		// XTime_GetTime(&setTime);
+//		xil_printf("%s: 2\n", __func__);
 
 		// totalInvTime += (invTime - startTime);
 		// totalSetTime += (setTime - invTime);
@@ -856,7 +857,7 @@ XTime maxGetTime = 0;
 XTime maxRemoveTime = 0;
 int OSSD_TICK_PER_SEC = 500000000;
 
-void InvalidateOldVsa(unsigned int logicalSliceAddr) {
+void InvalidateOldVsa(unsigned int logicalSliceAddr, bool last_discard) {
 	unsigned int virtualSliceAddr, dieNo, blockNo;
 
 	virtualSliceAddr = mapseg_get_mapping(logicalSliceAddr);
@@ -868,8 +869,12 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 	if (virtualSliceAddr != VSA_NONE) {
 //		if (virtualSlice.find(virtualSliceAddr).payload() != logicalSliceAddr)
 		if (virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr
-				!= logicalSliceAddr)
+				!= logicalSliceAddr){
+			xil_printf("%s: not match: %x %x \n",
+					virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr,
+					logicalSliceAddr);
 			return;
+		}
 
 		dieNo = Vsa2VdieTranslation(virtualSliceAddr);
 		blockNo = Vsa2VblockTranslation(virtualSliceAddr);
@@ -877,7 +882,7 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr) {
 		// unlink
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
-		mapseg_remove(logicalSliceAddr);
+		mapseg_remove(logicalSliceAddr, last_discard);
 //		logicalSlice.erase(logicalSliceAddr);
 //		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr =
 //		VSA_NONE;
