@@ -183,7 +183,7 @@
 
 //************************************************************************
 #define	BITS_PER_FLASH_CELL		SLC_MODE	//user configurable factor
-#define	USER_BLOCKS_PER_LUN		4096		//user configurable factor
+#define	USER_BLOCKS_PER_LUN		1024		//user configurable factor
 #define	USER_CHANNELS			(NUMBER_OF_CONNECTED_CHANNEL)		//user configurable factor
 #define	USER_WAYS				8			//user configurable factor
 //************************************************************************
@@ -192,7 +192,7 @@
 #define	BYTES_PER_SPARE_REGION_OF_SLICE		256
 
 #define SLICES_PER_PAGE				(BYTES_PER_DATA_REGION_OF_PAGE / BYTES_PER_DATA_REGION_OF_SLICE)	//a slice directs a page, full page mapping
-#define NVME_BLOCKS_PER_SLICE		(BYTES_PER_DATA_REGION_OF_SLICE / BYTES_PER_NVME_BLOCK / 4)
+#define NVME_BLOCKS_PER_SLICE		(BYTES_PER_DATA_REGION_OF_SLICE / BYTES_PER_NVME_BLOCK)
 
 #define	USER_DIES					(USER_CHANNELS * USER_WAYS)
 

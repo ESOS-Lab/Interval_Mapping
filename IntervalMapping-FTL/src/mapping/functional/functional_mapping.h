@@ -15,8 +15,8 @@
 #define SIZE_DATA_NODE (1 << 10)
 
 #define FUNCTIONAL_MAPPING_TREE_COUNT 8
-#define LSA_TO_TREE_NUM(lsa) ((lsa >> 29) & 7)
-#define TREE_NUM_TO_FIRST_LSA(num) (num << 29)
+#define LSA_TO_TREE_NUM(lsa) ((lsa >> 27) & 7)
+#define TREE_NUM_TO_FIRST_LSA(num) (num << 27)
 
 #define POSITION_LESS (-1)
 #define POSITION_LARGER
@@ -39,7 +39,7 @@ typedef struct data_node {
 typedef struct root_node {
     NodeModel model;
     int size;                       // expandable
-    DataNode *childTempNodes[1024];  // temporary static allocation.
+    DataNode *childTempNodes[128];  // temporary static allocation.
 } RootNode;
 
 typedef struct functional_mapping_tree {
