@@ -707,7 +707,9 @@ unsigned int AddrTransRead(unsigned int logicalSliceAddr) {
 	// 			!"[WARNING] Logical address is larger than maximum logical address served by SSD [WARNING]");
 }
 
-//XTime lastReportTime;
+XTime lastReportTime;
+unsigned int minLba[8] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
+unsigned int maxLba[8] = {0};
 //int calls = 0;
 //XTime totalInvTime;
 //XTime totalSetTime;
@@ -719,7 +721,6 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 	// if (logicalSliceAddr < SLICES_PER_SSD) {
 		XTime startTime, invTime, setTime;
 
-		// XTime_GetTime(&startTime);
 		InvalidateOldVsa(logicalSliceAddr);
 		// XTime_GetTime(&invTime);
 
@@ -739,20 +740,25 @@ unsigned int AddrTransWrite(unsigned int logicalSliceAddr) {
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr =
 				logicalSliceAddr;
 
-		// if (1.0 * (startTime - lastReportTime) / (OSSD_TICK_PER_SEC) >= 10) {
-		// 	char reportString[1024];
-		// 	sprintf(reportString, 
-		// 	"sec %f reporting calls: %d avg_invTime: %f avg_setTime: %f\n", 
-		// 		1.0 * startTime / (OSSD_TICK_PER_SEC), calls,
-		// 		1.0 * totalInvTime / OSSD_TICK_PER_SEC * 1000000 / calls,
-		// 		1.0 * totalSetTime / OSSD_TICK_PER_SEC * 1000000 / calls);
-		// 	xil_printf("%s", reportString);
-			
-		// 	lastReportTime = startTime;
-		// 	calls = 0;
-		// 	totalInvTime = 0;
-		// 	totalSetTime = 0;
-		// }
+		if (minLba[(logicalSliceAddr >> 29) & 7] > logicalSliceAddr) minLba[(logicalSliceAddr >> 29) & 7] = logicalSliceAddr;
+		if (maxLba[(logicalSliceAddr >> 29) & 7] < logicalSliceAddr) maxLba[(logicalSliceAddr >> 29) & 7] = logicalSliceAddr;
+
+
+		 XTime_GetTime(&startTime);
+		 if (1.0 * (startTime - lastReportTime) / (500000000) >= 5) {
+		 	for (int i = 0; i < 8; i++){
+			 	char reportString[1024];
+			 	sprintf(reportString,
+			 	"{%f, %u, %u}\n",
+					1.0 * startTime / (500000000),
+					minLba[i], maxLba[i]);
+			 	xil_printf("%s", reportString);
+
+			 	lastReportTime = startTime;
+				minLba[i] = 0xFFFFFFFF;
+				maxLba[i] = 0;
+			 }
+		 }
 
 		return virtualSliceAddr;
 	// } else
