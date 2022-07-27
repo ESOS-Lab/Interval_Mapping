@@ -1,5 +1,5 @@
 # Interval_Mapping
-FTL Implementation of ATC'22 Paper <IPLFS: Log-Structured File System without Garbage Collection> (Link TBD)
+FTL Implementation of ATC'22 Paper <IPLFS: Log-Structured File System without Garbage Collection> (https://www.usenix.org/conference/atc22/presentation/kim-juwon)
 
 ## Folder structure
 **/IntervalMapping-FTL**: 16K Page-based Interval Mapping FTL paired with IPLFS.  
